@@ -40,7 +40,7 @@ wifi:
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
     ssid: "Plants Fallback Hotspot"
-    password: "6kNAshsOomoy"
+    password: !secret plants_ota_password
 
 captive_portal:
 
