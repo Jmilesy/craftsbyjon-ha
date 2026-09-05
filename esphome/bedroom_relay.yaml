@@ -8,7 +8,7 @@ wifi:
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
     ssid: "Bedroom Relay Fallback Hotspot"
-    password: "BjOuPiPIgqTA"
+    password: !secret bedroom_relay_ota_password
 
 captive_portal:
 
