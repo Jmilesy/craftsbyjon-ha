@@ -24,7 +24,7 @@ wifi:
 
   ap:
     ssid: "ESP32-Fallback"
-    password: "fallback123"
+    password: !secret oled_test_ota_password
 
 # ===== WEB SERVER =====
 web_server:
