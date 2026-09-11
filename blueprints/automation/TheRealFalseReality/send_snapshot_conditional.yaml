@@ -5,10 +5,10 @@ blueprint:
     or if a binary sensor's state turns 'off' to 'on', and sends a notification to
     your phone with the picture. Clicking the notification will navigate to dashboard
     URL. [More Info](https://community.home-assistant.io/t/camera-send-save-snapshot-to-mobile-device-when-motion-is-detected-with-conditions/604156)
-    (v2.2.5) [Automation]
+    (v2.3) [Automation]
   author: TheFalseReality
   homeassistant:
-    min_version: 2024.6.0
+    min_version: 2024.10.0
   domain: automation
   source_url: https://gist.github.com/TheRealFalseReality/eab315e84f2711783fb7454ac0b42187
   input:
@@ -20,6 +20,13 @@ blueprint:
           domain:
           - binary_sensor
           multiple: false
+          reorder: false
+    trigger_additional:
+      name: Trigger(s)
+      description: Add Additional Trigger(s)
+      default: []
+      selector:
+        trigger: {}
     camera:
       name: Camera
       description: The camera which creates the snapshot
@@ -28,13 +35,22 @@ blueprint:
           domain:
           - camera
           multiple: false
+          reorder: false
     delay:
       name: Snapshot Delay
       description: Wait before creating camera snapshot.
       default:
         seconds: 1
       selector:
-        duration: {}
+        duration:
+          enable_second: true
+    condition_auto:
+      name: Add Condition(s) to run this Automation
+      description: Add conditions if needed to run this automation at all. Note, if
+        conditions return `false`, no actions will fire.
+      default: []
+      selector:
+        condition: {}
     condition:
       name: Add Condition(s) to send Snapshot
       description: Add conditions if needed to send snapshot to device
@@ -288,6 +304,13 @@ blueprint:
           default: true
           selector:
             boolean: {}
+        delay_send:
+          name: Send Snapshot Delay
+          description: Wait before sending a notification, in seconds.
+          default: 0
+          selector:
+            duration:
+              enable_second: true
         delay_notification:
           name: Notification Delay
           description: Wait before sending another notification, in seconds. (ex.
@@ -308,11 +331,6 @@ blueprint:
           default: false
           selector:
             boolean: {}
-        notification_video:
-          name: Video
-          description: You can optionally attach the clip to the notification which
-            will replace the thumbnail/snapshot above, if available. (local url, [Documentaion](https://companion.home-assistant.io/docs/notifications/notification-attachments))
-          default: ''
         notification_group:
           name: Group
           description: The group name that will determine if notifications are grouped
@@ -335,16 +353,17 @@ blueprint:
           default: ''
         file_path:
           name: File Path
-          description: "The file path to store the most current snapshot. Defaults
-            to **/media/snapshots/<camera_name>**\n\n `/media/snapshots/{{ states[camera].object_id
-            }}/last_motion.jpg`\n\n Try `/config/www/snapshots/{{ states[camera].object_id
-            }}/last_motion.jpg` if you are having issues"
+          description: "The file path to store the most current snapshot. \n\nDO NOT
+            ADD `/local`, the blueprint with do that automaticaly with `/media` ->
+            `/media/local`. \n\nDefaults to **/media/snapshots/<camera_name>** `/media/snapshots/{{
+            states[camera].object_id }}/last_motion.jpg`\n\n Try `/config/www/snapshots/{{
+            states[camera].object_id }}/last_motion.jpg` if you are having issues"
           default: /media/snapshots/{{ states[camera].object_id }}/last_motion.jpg
         save_archive_file:
           name: Save Archive Files?
           description: Choose to activate saving of old snapshots or not (default
-            = on).
-          default: true
+            = off).
+          default: false
           selector:
             boolean: {}
         conditionSave:
@@ -356,9 +375,15 @@ blueprint:
             condition: {}
         archive_file_path:
           name: Archive File Path
-          description: The file path to store the snapshot in an archive folder. Defaults
-            to **/media/snapshots/<camera_name>** - `/media/snapshots/{{ states[camera].object_id
-            }}/archive/motion_{{ now().strftime("%Y%m%d-%H%M%S")`.
+          description: 'The file path to store the snapshot in an archive folder.
+
+
+            DO NOT ADD `/local`, the blueprint with do that automaticaly with `/media`
+            -> `/media/local`.
+
+
+            Defaults to **/media/snapshots/<camera_name>** - `/media/snapshots/{{
+            states[camera].object_id }}/archive/motion_{{ now().strftime("%Y%m%d-%H%M%S")`.'
           default: /media/snapshots/{{ states[camera].object_id }}/archive/motion_{{
             now().strftime("%Y%m%d-%H%M%S") }}.jpg
         additional_actions_before:
@@ -375,6 +400,24 @@ blueprint:
           default: []
           selector:
             action: {}
+        mode_select:
+          name: Mode Select
+          description: Select mode for automation. (default = Parallel)
+          default: parallel
+          selector:
+            select:
+              options:
+              - label: Single
+                value: single
+              - label: Restart
+                value: restart
+              - label: Queued
+                value: queued
+              - label: Parallel
+                value: parallel
+              multiple: false
+              custom_value: false
+              sort: false
         action_type:
           name: Action Type (EXPERIMENTAL)
           description: 'Set action type, see [Actionable Notifications](https://companion.home-assistant.io/docs/notifications/actionable-notifications/).
@@ -388,14 +431,16 @@ blueprint:
           name: Action URI (EXPERIMENTAL)
           description: 'URI to naviagte to. default: /lovelace'
           default: '{{ clickActionURL }}'
-trigger:
+triggers:
 - platform: state
   entity_id: !input sensor
   from: 'off'
   to: 'on'
+- triggers: !input trigger_additional
 variables:
   sensor: !input sensor
   sensor_name: '{{ states[sensor].name }}'
+  trigger_additional: !input trigger_additional
   camera: !input camera
   camera_name: '{{ states[camera].name }}'
   notify_device: !input notify_device
@@ -412,6 +457,7 @@ variables:
     ''/local'') | replace(''/media'', ''/media/local'') }}'
   condition: !input condition
   conditionSave: !input conditionSave
+  condition_auto: !input condition_auto
   clickActionURL: !input data_clickaction_url
   save_archive_file: !input save_archive_file
   additional_actions: !input additional_actions
@@ -420,7 +466,6 @@ variables:
   notify_group: !input notify_group
   notify_group_target: '{{ notify_group | lower | regex_replace(''^notify\.'', '''')
     | replace('' '',''_'') }}'
-  notification_video: !input notification_video
   notification_channel: !input notification_channel
   notification_group: !input notification_group
   notification_sticky: !input notification_sticky
@@ -439,29 +484,88 @@ variables:
   tv_duration: !input tv_duration
   tv_transparency: !input tv_transparency
   tv_interrupt: !input tv_interrupt
-action:
-- choose: []
-  default: !input additional_actions_before
-- delay: !input delay
-- service: camera.snapshot
-  entity_id: !input camera
-  data:
-    filename: !input file_path
+  mode_select: !input mode_select
+  delay_send: !input delay_send
+actions:
 - if:
-  - condition: template
-    value_template: !input notify
+  - condition: !input condition_auto
   then:
+  - choose: []
+    default: !input additional_actions_before
+  - delay: !input delay
+  - service: camera.snapshot
+    entity_id: !input camera
+    data:
+      filename: !input file_path
+  - delay: !input delay_send
   - if:
-    - condition: !input condition
+    - condition: template
+      value_template: !input notify
     then:
     - if:
-      - condition: template
-        value_template: '{{ not this.attributes.last_triggered or (now() - this.attributes.last_triggered).seconds
-          > delay_notification }}'
+      - condition: !input condition
       then:
-      - choose:
-        - conditions: '{{ android_tv }}'
-          sequence:
+      - if:
+        - condition: template
+          value_template: '{{ not this.attributes.last_triggered or (now() - this.attributes.last_triggered).seconds
+            > delay_notification }}'
+        then:
+        - choose:
+          - conditions: '{{ android_tv }}'
+            sequence:
+            - service: notify.{{ notify_group_target }}
+              data:
+                title: !input notification_title
+                message: !input notification_message
+                data:
+                  channel: !input notification_channel
+                  group: !input notification_group
+                  color: !input notification_color
+                  clickAction: !input data_clickaction_url
+                  sticky: !input notification_sticky
+                  notification_icon: !input notification_icon
+                  ttl: 0
+                  priority: high
+                  image:
+                    path: '{{ snapshot_access_file_path }}'
+                  fontsize: '{{tv_size}}'
+                  position: '{{tv_position}}'
+                  duration: '{{tv_duration}}'
+                  transparency: '{{tv_transparency}}'
+                  interrupt: '{{tv_interrupt}}'
+                  timeout: 30
+          - conditions: '{{ not notify_group_target }}'
+            sequence:
+            - device_id: !input notify_device
+              domain: mobile_app
+              type: notify
+              title: !input notification_title
+              message: !input notification_message
+              data:
+                channel: !input notification_channel
+                group: !input notification_group
+                color: !input notification_color
+                image: '{{ snapshot_access_file_path }}'
+                clickAction: !input data_clickaction_url
+                sticky: !input notification_sticky
+                alert_once: !input notification_alert_once
+                notification_icon: !input notification_icon
+                ttl: 0
+                priority: high
+                attachment:
+                  url: '{{ snapshot_access_file_path }}'
+                  content_type: JPEG
+                url: !input data_clickaction_url
+                push:
+                  sound:
+                    name: !input notification_sound
+                    volume: !input notification_volume
+                    critical: '{{ notification_critical }}'
+                actions:
+                - action: '{{ action_type }}'
+                  title: '{{ action_title }}'
+                  uri: '{{ action_uri }}'
+          default:
           - service: notify.{{ notify_group_target }}
             data:
               title: !input notification_title
@@ -470,93 +574,37 @@ action:
                 channel: !input notification_channel
                 group: !input notification_group
                 color: !input notification_color
+                image: '{{ snapshot_access_file_path }}'
                 clickAction: !input data_clickaction_url
-                video: !input notification_video
                 sticky: !input notification_sticky
+                alert_once: !input notification_alert_once
                 notification_icon: !input notification_icon
                 ttl: 0
                 priority: high
-                image:
-                  path: '{{ snapshot_create_file_path }}'
-                fontsize: '{{tv_size}}'
-                position: '{{tv_position}}'
-                duration: '{{tv_duration}}'
-                transparency: '{{tv_transparency}}'
-                interrupt: '{{tv_interrupt}}'
-                timeout: 30
-        - conditions: '{{ not notify_group_target }}'
-          sequence:
-          - device_id: !input notify_device
-            domain: mobile_app
-            type: notify
-            title: !input notification_title
-            message: !input notification_message
-            data:
-              channel: !input notification_channel
-              group: !input notification_group
-              color: !input notification_color
-              image: '{{ snapshot_access_file_path }}'
-              clickAction: !input data_clickaction_url
-              video: !input notification_video
-              sticky: !input notification_sticky
-              alert_once: !input notification_alert_once
-              notification_icon: !input notification_icon
-              ttl: 0
-              priority: high
-              attachment:
-                url: '{{ snapshot_access_file_path }}'
-                content_type: JPEG
-              url: !input data_clickaction_url
-              push:
-                sound:
-                  name: !input notification_sound
-                  volume: !input notification_volume
-                  critical: '{{ notification_critical }}'
-              actions:
-              - action: '{{ action_type }}'
-                title: '{{ action_title }}'
-                uri: '{{ action_uri }}'
-        default:
-        - service: notify.{{ notify_group_target }}
-          data:
-            title: !input notification_title
-            message: !input notification_message
-            data:
-              channel: !input notification_channel
-              group: !input notification_group
-              color: !input notification_color
-              image: '{{ snapshot_access_file_path }}'
-              clickAction: !input data_clickaction_url
-              video: !input notification_video
-              sticky: !input notification_sticky
-              alert_once: !input notification_alert_once
-              notification_icon: !input notification_icon
-              ttl: 0
-              priority: high
-              attachment:
-                url: '{{ snapshot_access_file_path }}'
-                content_type: JPEG
-              url: !input data_clickaction_url
-              push:
-                sound:
-                  name: !input notification_sound
-                  volume: !input notification_volume
-                  critical: '{{ iif(notification_critical, 1, 0) }}'
-              actions:
-              - action: '{{ action_type }}'
-                title: '{{ action_title }}'
-                uri: '{{ action_uri }}'
-- if:
-  - condition: template
-    value_template: !input save_archive_file
-  then:
+                attachment:
+                  url: '{{ snapshot_access_file_path }}'
+                  content_type: JPEG
+                url: !input data_clickaction_url
+                push:
+                  sound:
+                    name: !input notification_sound
+                    volume: !input notification_volume
+                    critical: '{{ iif(notification_critical, 1, 0) }}'
+                actions:
+                - action: '{{ action_type }}'
+                  title: '{{ action_title }}'
+                  uri: '{{ action_uri }}'
   - if:
-    - condition: !input conditionSave
+    - condition: template
+      value_template: !input save_archive_file
     then:
-    - service: camera.snapshot
-      entity_id: !input camera
-      data:
-        filename: !input archive_file_path
-- choose: []
-  default: !input additional_actions
-mode: parallel
+    - if:
+      - condition: !input conditionSave
+      then:
+      - service: camera.snapshot
+        entity_id: !input camera
+        data:
+          filename: !input archive_file_path
+  - choose: []
+    default: !input additional_actions
+mode: !input mode_select
