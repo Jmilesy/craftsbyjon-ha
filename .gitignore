@@ -63,3 +63,20 @@ go2rtc-1.9.9
 *.bak
 *.bak-*
 *.bak-*/
+
+# Newline-mangling corruption pattern (known SSH-command-wrapper bug) - never real config
+*.yamln*
+
+# Backup/scratch copies - not config
+*.bak
+*.bak.*
+*.bak_*
+*-bak-*
+
+# Debug/troubleshooting output dumps
+.check_config_out*.txt
+*_output*.txt
+
+# SSH keys referenced by shell_command scripts - must stay in /config for
+# HA container to see them, but must never be staged/committed
+.ssh/

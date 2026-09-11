@@ -8,3 +8,20 @@
 **/src/
 **/platformio.ini
 /secrets.yaml
+
+# Added 5 Sep 2026 for GitHub deploy pipeline setup
+*.bak
+*.bak-*
+*.newndiff
+*.retired
+*_upload_log.txt
+*_compile_log.txt
+*_live_log.txt
+*_logs_test.txt
+upload_log.txt
+compile_log.txt
+upload_serial_log.txt
+upload_serial_log2.txt
+mmwave-build.log
+.device-builder*
+archive/
