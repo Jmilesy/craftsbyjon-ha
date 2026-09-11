@@ -1,0 +1,202 @@
+title: Crafts by Jon
+path: cbj
+type: sidebar
+theme: Google Dark Theme
+cards:
+
+  # ── BACK ──────────────────────────────────────────────────────────
+  - type: custom:mushroom-chips-card
+    chips:
+      - type: back
+    alignment: center
+    card_mod:
+      style: |
+        ha-card {
+          background: rgba(255,255,255,0.05) !important;
+          border-radius: 20px;
+          border: 1px solid rgba(255,255,255,0.12);
+          box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+          backdrop-filter: blur(12px);
+          margin-bottom: 8px;
+        }
+
+  # ── LCARS HEADER ─────────────────────────────────────────────────────────
+  - type: custom:layout-card
+    layout_type: grid
+    layout:
+      grid-template-columns: 70px 1fr 160px
+      grid-gap: 4px
+    cards:
+      - type: custom:button-card
+        show_name: false
+        show_icon: false
+        show_state: false
+        styles:
+          card:
+            - background: '#FF9900'
+            - border-radius: 40px 0 0 40px
+            - height: 64px
+
+      - type: custom:button-card
+        show_icon: false
+        show_state: false
+        name: "CRAFTS · BY · JON"
+        card_mod:
+          style: |
+            @import url('https://fonts.googleapis.com/css2?family=Antonio:wght@700&display=swap');
+        styles:
+          card:
+            - background: '#000000'
+            - height: 64px
+            - display: flex
+            - align-items: center
+            - justify-content: flex-start
+            - padding-left: 20px
+          name:
+            - font-family: "'Antonio', 'Arial Narrow', sans-serif"
+            - font-size: clamp(1.2rem, 3vw, 2rem)
+            - font-weight: 700
+            - letter-spacing: 0.12em
+            - color: '#FF9900'
+
+      - type: custom:button-card
+        show_icon: false
+        show_state: false
+        name: |
+          [[[ return states['sensor.header_current_time'] ? states['sensor.header_current_time'].state : ''; ]]]
+        styles:
+          card:
+            - background: '#CC99CC'
+            - border-radius: 0 40px 40px 0
+            - height: 64px
+            - display: flex
+            - align-items: center
+            - justify-content: center
+          name:
+            - font-family: "'Antonio', 'Arial Narrow', sans-serif"
+            - font-size: 1.3rem
+            - font-weight: 700
+            - color: '#000000'
+
+  # ── SPACER ────────────────────────────────────────────────────────────────
+  - type: custom:button-card
+    color_type: blank-card
+    styles:
+      card:
+        - height: 8px
+        - background: transparent
+
+  # ── PAPER SAFETY (primary control) ───────────────────────────────────────
+  - type: custom:button-card
+    entity: input_boolean.printer_paper_safe
+    name: |
+      [[[
+        return entity.state === 'on'
+          ? 'PAPER SAFE · OK TO PRINT'
+          : 'HOLD · STICKERS LOADED';
+      ]]]
+    icon: |
+      [[[
+        return entity.state === 'on' ? 'mdi:printer-check' : 'mdi:printer-alert';
+      ]]]
+    show_state: false
+    tap_action:
+      action: toggle
+    styles:
+      card:
+        - background: |
+            [[[ return entity.state === 'on' ? '#5FCC7A' : '#CC5F5F'; ]]]
+        - border-radius: 34px
+        - height: 90px
+        - display: flex
+        - align-items: center
+        - justify-content: flex-start
+        - padding-left: 24px
+        - box-shadow: 0 8px 24px rgba(0,0,0,0.5)
+        - transition: background 0.3s ease
+      icon:
+        - width: 40px
+        - height: 40px
+        - color: '#000000'
+        - margin-right: 16px
+      name:
+        - font-family: "'Antonio', 'Arial Narrow', sans-serif"
+        - font-size: clamp(1rem, 2.6vw, 1.5rem)
+        - font-weight: 700
+        - letter-spacing: 0.08em
+        - color: '#000000'
+
+  # ── INFO STRIP ──────────────────────────────────────────────────────────────
+  - type: custom:button-card
+    show_icon: false
+    show_state: false
+    name: >
+      Gates Goodwin Academy email auto-print and CBJ dispatch note
+      auto-print once wired up — ON means normal paper is loaded and it's
+      safe to print, OFF means stickers are loaded and jobs are held.
+    styles:
+      card:
+        - background: 'rgba(255,153,0,0.08)'
+        - border-left: '4px solid #FF9900'
+        - border-radius: 6px
+        - padding: 14px 18px
+        - margin-top: 4px
+      name:
+        - font-size: 0.85rem
+        - color: 'rgba(255,255,255,0.85)'
+        - white-space: normal
+        - text-align: left
+        - font-weight: 500
+
+  # ── SPACER ────────────────────────────────────────────────────────────────
+  - type: custom:button-card
+    color_type: blank-card
+    styles:
+      card:
+        - height: 16px
+        - background: transparent
+
+  # ── QUICK NAV ─────────────────────────────────────────────────────────────
+  - type: custom:layout-card
+    layout_type: grid
+    layout:
+      grid-template-columns: repeat(2, 1fr)
+      grid-gap: 6px
+    cards:
+      - type: custom:button-card
+        name: "3D PRINTER"
+        icon: mdi:printer-3d
+        tap_action:
+          action: navigate
+          navigation_path: /cinematic-dashboard/printer
+        styles:
+          card:
+            - background: '#9999FF'
+            - border-radius: 30px
+            - height: 60px
+          name:
+            - font-family: "'Antonio', 'Arial Narrow', sans-serif"
+            - font-weight: 700
+            - letter-spacing: 0.08em
+            - color: '#000000'
+          icon:
+            - color: '#000000'
+
+      - type: custom:button-card
+        name: "CBJ STORE"
+        icon: mdi:open-in-new
+        tap_action:
+          action: url
+          url_path: https://craftsbyjon.co.uk
+        styles:
+          card:
+            - background: '#CC99CC'
+            - border-radius: 30px
+            - height: 60px
+          name:
+            - font-family: "'Antonio', 'Arial Narrow', sans-serif"
+            - font-weight: 700
+            - letter-spacing: 0.08em
+            - color: '#000000'
+          icon:
+            - color: '#000000'

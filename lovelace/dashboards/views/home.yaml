@@ -225,6 +225,17 @@ cards:
           action: navigate
           navigation_path: /cinematic-dashboard/media
 
+      - type: custom:button-card
+        template: nav_button
+        entity: input_boolean.printer_paper_safe
+        name: CBJ
+        icon: mdi:bookmark-multiple
+        variables:
+          icon_color: '#FF9900'
+        tap_action:
+          action: navigate
+          navigation_path: /cinematic-dashboard/cbj
+
   ###############################################################
   # SPACER
   ###############################################################
@@ -417,7 +428,8 @@ cards:
     initial_view: listWeek
     entities:
       - calendar.anniversaries
-      - calendar.sandown_school_calendar
+      - calendar.jacob_timetable
+      - calendar.joseph_timetable
     card_mod:
       style: |
         ha-card {

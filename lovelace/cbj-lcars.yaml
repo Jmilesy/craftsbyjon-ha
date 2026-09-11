@@ -1,0 +1,245 @@
+title: CBJ LCARS
+views:
+  - title: Operations
+    path: cbj-ops
+    icon: mdi:rocket-launch
+    theme: "LCARS Modern"
+    cards:
+      - type: vertical-stack
+        cards:
+          - type: markdown
+            content: "# CRAFTS BY JON"
+            card_mod:
+              class: header-left
+          - type: horizontal-stack
+            card_mod:
+              class: middle-left
+            cards:
+              - type: button
+                entity: sensor.cbj_orders_today
+                name: Orders Today
+                show_name: true
+                show_state: true
+                show_icon: true
+                icon: mdi:cart
+                tap_action:
+                  action: none
+                card_mod:
+                  class: button-lozenge-left
+              - type: button
+                entity: sensor.cbj_orders_today_revenue
+                name: Revenue Today
+                show_name: true
+                show_state: true
+                show_icon: true
+                icon: mdi:cash
+                tap_action:
+                  action: none
+                card_mod:
+                  class: button-lozenge-right
+          - type: horizontal-stack
+            card_mod:
+              class: middle-left
+            cards:
+              - type: button
+                entity: sensor.cbj_orders_this_week
+                name: Orders This Week
+                show_name: true
+                show_state: true
+                show_icon: true
+                icon: mdi:cart-outline
+                tap_action:
+                  action: none
+                card_mod:
+                  class: button-lozenge-left
+              - type: button
+                entity: sensor.cbj_orders_this_week_revenue
+                name: Revenue This Week
+                show_name: true
+                show_state: true
+                show_icon: true
+                icon: mdi:cash-multiple
+                tap_action:
+                  action: none
+                card_mod:
+                  class: button-lozenge-right
+          - type: horizontal-stack
+            card_mod:
+              class: middle-left
+            cards:
+              - type: button
+                entity: sensor.cbj_total_orders
+                name: Total Orders
+                show_name: true
+                show_state: true
+                show_icon: true
+                icon: mdi:receipt
+                tap_action:
+                  action: none
+                card_mod:
+                  class: button-lozenge-left
+              - type: button
+                entity: sensor.cbj_total_revenue
+                name: Total Revenue
+                show_name: true
+                show_state: true
+                show_icon: true
+                icon: mdi:cash-100
+                tap_action:
+                  action: none
+                card_mod:
+                  class: button-lozenge-right
+          - type: markdown
+            content: "&nbsp;"
+            card_mod:
+              class: footer-left
+
+      - type: vertical-stack
+        cards:
+          - type: markdown
+            content: "# STOCK STATUS"
+            card_mod:
+              class: header-right
+          - type: horizontal-stack
+            card_mod:
+              class: middle-right
+            cards:
+              - type: button
+                entity: sensor.cbj_low_stock_count
+                name: Low Stock
+                show_name: true
+                show_state: true
+                show_icon: true
+                icon: mdi:package-variant-minus
+                tap_action:
+                  action: none
+                card_mod:
+                  class: button-lozenge-left
+              - type: button
+                entity: sensor.cbj_out_of_stock_count
+                name: Out of Stock
+                show_name: true
+                show_state: true
+                show_icon: true
+                icon: mdi:package-variant-remove
+                tap_action:
+                  action: none
+                card_mod:
+                  class: button-lozenge-right
+          - type: markdown
+            content: >-
+              **Low stock items:** {{ state_attr('sensor.cbj_low_stock_count','low_stock_ids') | join(', ') if state_attr('sensor.cbj_low_stock_count','low_stock_ids') else 'None' }}
+
+
+              **Out of stock:** {{ state_attr('sensor.cbj_low_stock_count','out_of_stock_ids') | join(', ') if state_attr('sensor.cbj_low_stock_count','out_of_stock_ids') else 'None' }}
+            card_mod:
+              class: middle-blank
+          - type: horizontal-stack
+            card_mod:
+              class: footer-right
+            cards:
+              - type: button
+                entity: sensor.cbj_live_products
+                name: Live Products
+                show_name: true
+                show_state: true
+                show_icon: true
+                icon: mdi:store-check
+                tap_action:
+                  action: none
+                card_mod:
+                  class: button-lozenge-left
+              - type: button
+                entity: sensor.cbj_total_products
+                name: Total Products
+                show_name: true
+                show_state: true
+                show_icon: true
+                icon: mdi:store
+                tap_action:
+                  action: none
+                card_mod:
+                  class: button-lozenge-right
+
+      - type: vertical-stack
+        cards:
+          - type: markdown
+            content: "# PRIORITIES"
+            card_mod:
+              class: header-left
+          - type: horizontal-stack
+            card_mod:
+              class: middle-left
+            cards:
+              - type: button
+                entity: sensor.cbj_open_tasks
+                name: Open Tasks
+                show_name: true
+                show_state: true
+                show_icon: true
+                icon: mdi:format-list-checks
+                tap_action:
+                  action: none
+                card_mod:
+                  class: button-lozenge-left
+              - type: button
+                entity: sensor.cbj_in_progress_tasks
+                name: In Progress
+                show_name: true
+                show_state: true
+                show_icon: true
+                icon: mdi:progress-clock
+                tap_action:
+                  action: none
+                card_mod:
+                  class: button-lozenge-right
+          - type: markdown
+            content: >-
+              **TOP TASK:** {{ states('sensor.cbj_top_priority_task') }}
+              {% if state_attr('sensor.cbj_top_priority_task','top_task_area') %}_(area: {{ state_attr('sensor.cbj_top_priority_task','top_task_area') }})_{% endif %}
+            card_mod:
+              class: middle-blank
+          - type: markdown
+            content: "&nbsp;"
+            card_mod:
+              class: footer-left
+
+      - type: vertical-stack
+        cards:
+          - type: markdown
+            content: "# FULFILMENT"
+            card_mod:
+              class: header-right
+          - type: horizontal-stack
+            card_mod:
+              class: middle-right
+            cards:
+              - type: button
+                entity: sensor.cbj_pending_dispatch
+                name: Pending Dispatch
+                show_name: true
+                show_state: true
+                show_icon: true
+                icon: mdi:truck-outline
+                tap_action:
+                  action: none
+                card_mod:
+                  class: button-lozenge-left
+              - type: button
+                entity: sensor.cbj_backorders
+                name: Backorders
+                show_name: true
+                show_state: true
+                show_icon: true
+                icon: mdi:alert-box-outline
+                tap_action:
+                  action: none
+                card_mod:
+                  class: button-lozenge-right
+          - type: entities
+            card_mod:
+              class: footer-right
+            entities:
+              - entity: sensor.cbj_last_order
+                name: Last Order Received
+                icon: mdi:clock-outline

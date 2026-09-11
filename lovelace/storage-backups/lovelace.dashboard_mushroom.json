@@ -209,14 +209,14 @@
                   "type": "custom:mushroom-template-card",
                   "entity": "person.joseph",
                   "primary": "Joseph - {{ states(entity) | title }}",
-                  "secondary": "{% set lvl = states('sensor.joseph_battery_level') | int %} {% set chg = states('sensor.joseph_battery_state') %} {% if chg == 'charging' %}\n  {{ lvl }}% (Charging)\n{% elif chg == 'full' %}\n  {{ lvl }}% (Full)\n{% elif chg == 'not_charging' %}\n  {{ lvl }}% (Not Charging)\n{% else %}\n  {{ lvl }}%\n{% endif %}\n",
+                  "secondary": "{% set lvl = states('sensor.joseph_phone_battery_level') | int %} {% set chg = states('sensor.joseph_phone_battery_state') %} {% if chg == 'charging' %}\n  {{ lvl }}% (Charging)\n{% elif chg == 'full' %}\n  {{ lvl }}% (Full)\n{% elif chg == 'not_charging' %}\n  {{ lvl }}% (Not Charging)\n{% else %}\n  {{ lvl }}%\n{% endif %}\n",
                   "icon_color": "magenta",
                   "picture": "{{ state_attr('person.joseph', 'entity_picture') }}",
                   "badge": "{{ states('person.joseph') }}",
                   "badge_color": "magenta",
                   "badge_icon": "{% set z = states('person.joseph') %} {% if z in ['not_home','unknown'] %}\n  mdi:map-marker\n{% else %}\n  {{ state_attr('zone.' ~ z, 'icon') }}\n{% endif %}\n",
                   "card_mod": {
-                    "style": "{% set lvl = states('sensor.joseph_battery_level') | int %}\n{% set chg = states('sensor.joseph_battery_state') %}\n{% set home = states('person.joseph') == 'home' %}\n\nha-card {\n  border-radius: 18px;\n  transition: 0.4s ease;\n  background-color: rgba(255,0,255,0.15);\n  box-shadow: 0 0 18px rgba(255,0,255,0.25);\n}\n\n{% if home and (chg == 'charging' or lvl < 20) %}\nha-card { animation: pulse 1.5s ease-out 1; }\n{% endif %}\n\n@keyframes pulse {\n  0% { transform: scale(1); opacity: 1; }\n  50% { transform: scale(1.15); opacity: 0.6; }\n  100% { transform: scale(1); opacity: 1; }\n}\n\n{% if home and chg == 'charging' %}\nha-card {\n  background-image: linear-gradient(\n    to top,\n    rgba(255,0,255,0.35) 0%,\n    rgba(255,0,255,0.15) 40%,\n    rgba(255,0,255,0.05) 70%,\n    rgba(255,0,255,0.00) 100%\n  );\n  background-size: 100% 300%;\n  animation: batteryFill 2.5s linear infinite;\n}\n{% endif %}\n\n@keyframes batteryFill {\n  0%   { background-position: 0% 100%; }\n  100% { background-position: 0% 0%; }\n}\n\nha-card::after {\n  content: \"\";\n  display: block;\n  height: 10px;\n  width: 100%;\n  margin-top: 8px;\n  border-radius: 4px;\n  background: rgba(255,255,255,0.15);\n  position: relative;\n  overflow: hidden;\n}\n\nha-card::before {\n  content: \"{{ lvl }}%\";\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  font-size: 8px;\n  font-weight: bold;\n  color: white;\n  height: 100%;\n  width: {{ lvl }}%;\n  border-radius: 4px;\n  position: absolute;\n  top: 0;\n  left: 0;\n  background: linear-gradient(\n    90deg,\n    rgba(255,0,255,0.55) 0%,\n    rgba(204,0,204,0.55) 100%\n  );\n  transition: width 0.4s ease;\n  text-shadow: 0 0 3px rgba(0,0,0,0.8);\n}\n\n{% if home and chg == 'charging' %}\nha-card::before {\n  box-shadow: 0 0 8px rgba(255,0,255,0.7);\n  animation: batteryFlow 1.8s linear infinite;\n  background-size: 200% 100%;\n}\n{% endif %}\n\n@keyframes batteryFlow {\n  0%   { background-position: 200% 0; }\n  100% { background-position: -200% 0; }\n}\n\n{% if lvl < 15 %}\nha-card::before { animation: shake 0.4s ease-in-out infinite; }\n{% endif %}\n\n@keyframes shake {\n  0% { transform: translateX(0); }\n  25% { transform: translateX(-2px); }\n  50% { transform: translateX(2px); }\n  75% { transform: translateX(-2px); }\n  100% { transform: translateX(0); }\n}\n"
+                    "style": "{% set lvl = states('sensor.joseph_phone_battery_level') | int %}\n{% set chg = states('sensor.joseph_phone_battery_state') %}\n{% set home = states('person.joseph') == 'home' %}\n\nha-card {\n  border-radius: 18px;\n  transition: 0.4s ease;\n  background-color: rgba(255,0,255,0.15);\n  box-shadow: 0 0 18px rgba(255,0,255,0.25);\n}\n\n{% if home and (chg == 'charging' or lvl < 20) %}\nha-card { animation: pulse 1.5s ease-out 1; }\n{% endif %}\n\n@keyframes pulse {\n  0% { transform: scale(1); opacity: 1; }\n  50% { transform: scale(1.15); opacity: 0.6; }\n  100% { transform: scale(1); opacity: 1; }\n}\n\n{% if home and chg == 'charging' %}\nha-card {\n  background-image: linear-gradient(\n    to top,\n    rgba(255,0,255,0.35) 0%,\n    rgba(255,0,255,0.15) 40%,\n    rgba(255,0,255,0.05) 70%,\n    rgba(255,0,255,0.00) 100%\n  );\n  background-size: 100% 300%;\n  animation: batteryFill 2.5s linear infinite;\n}\n{% endif %}\n\n@keyframes batteryFill {\n  0%   { background-position: 0% 100%; }\n  100% { background-position: 0% 0%; }\n}\n\nha-card::after {\n  content: \"\";\n  display: block;\n  height: 10px;\n  width: 100%;\n  margin-top: 8px;\n  border-radius: 4px;\n  background: rgba(255,255,255,0.15);\n  position: relative;\n  overflow: hidden;\n}\n\nha-card::before {\n  content: \"{{ lvl }}%\";\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  font-size: 8px;\n  font-weight: bold;\n  color: white;\n  height: 100%;\n  width: {{ lvl }}%;\n  border-radius: 4px;\n  position: absolute;\n  top: 0;\n  left: 0;\n  background: linear-gradient(\n    90deg,\n    rgba(255,0,255,0.55) 0%,\n    rgba(204,0,204,0.55) 100%\n  );\n  transition: width 0.4s ease;\n  text-shadow: 0 0 3px rgba(0,0,0,0.8);\n}\n\n{% if home and chg == 'charging' %}\nha-card::before {\n  box-shadow: 0 0 8px rgba(255,0,255,0.7);\n  animation: batteryFlow 1.8s linear infinite;\n  background-size: 200% 100%;\n}\n{% endif %}\n\n@keyframes batteryFlow {\n  0%   { background-position: 200% 0; }\n  100% { background-position: -200% 0; }\n}\n\n{% if lvl < 15 %}\nha-card::before { animation: shake 0.4s ease-in-out infinite; }\n{% endif %}\n\n@keyframes shake {\n  0% { transform: translateX(0); }\n  25% { transform: translateX(-2px); }\n  50% { transform: translateX(2px); }\n  75% { transform: translateX(-2px); }\n  100% { transform: translateX(0); }\n}\n"
                   }
                 }
               ]
@@ -383,7 +383,8 @@
               "type": "calendar",
               "entities": [
                 "calendar.anniversaries",
-                "calendar.sandown_school_calendar"
+                "calendar.jacob_timetable",
+                "calendar.joseph_timetable"
               ]
             },
             {
@@ -598,7 +599,7 @@
               "cards": [
                 {
                   "type": "custom:mushroom-light-card",
-                  "entity": "light.joseph",
+                  "entity": "light.joseph_s_light",
                   "hide_state": true,
                   "show_brightness_control": true,
                   "use_light_color": true,
@@ -1980,7 +1981,7 @@
                   "min_location_slots": 4,
                   "wizards": [
                     {
-                      "entity": "device_tracker.joseph",
+                      "entity": "device_tracker.joseph_phone",
                       "name": "Joseph",
                       "colour": "#9D00FF",
                       "textcolour": "#FFF"

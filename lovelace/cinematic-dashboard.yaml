@@ -42,3 +42,4 @@ views:
   - !include ./dashboards/views/esphome.yaml
   - !include ./dashboards/views/floorplan.yaml
   - !include ./dashboards/views/printer.yaml
+  - !include ./dashboards/views/cbj.yaml
