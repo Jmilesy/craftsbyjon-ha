@@ -1,0 +1,15 @@
+- sensor:
+    - name: waste_missed_collections
+      unique_id: waste_missed_collections
+      state: >
+        {% set services = state_attr('sensor.dover_waste_raw', 'activeServices') or [] %}
+        {% set ns = namespace(missed=[]) %}
+        {% for svc in services %}
+          {% for sched in svc.serviceSchedules %}
+            {% set st = sched.state | default('') | lower %}
+            {% if 'not completed' in st or 'could not' in st %}
+              {% set ns.missed = ns.missed + [svc.serviceName] %}
+            {% endif %}
+          {% endfor %}
+        {% endfor %}
+        {{ ns.missed | unique | join(', ') if ns.missed else 'No issues' }}
