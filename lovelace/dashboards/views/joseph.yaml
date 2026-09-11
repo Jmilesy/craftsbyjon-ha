@@ -105,7 +105,7 @@ cards:
 
   # Joseph's Light Control
   - type: custom:mushroom-light-card
-    entity: light.joseph
+    entity: light.joseph_s_light
     use_light_color: true
     show_brightness_control: true
     show_color_control: true
@@ -199,7 +199,7 @@ cards:
   - type: horizontal-stack
     cards:
       - type: sensor
-        entity: sensor.joseph_battery_level
+        entity: sensor.joseph_phone_battery_level
         name: Phone Battery
         icon: mdi:battery
         card_mod:
@@ -213,7 +213,7 @@ cards:
             }
       
       - type: sensor
-        entity: sensor.joseph_wi_fi_connection
+        entity: sensor.joseph_phone_wi_fi_connection
         name: WiFi
         icon: mdi:wifi
         card_mod:

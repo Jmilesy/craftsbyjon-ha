@@ -2,34 +2,10 @@
     - name: school_event_tomorrow
       unique_id: school_event_tomorrow
       state: >
-        {% set title = state_attr('calendar.sandown_school_calendar', 'message') %}
-        {% set start = state_attr('calendar.sandown_school_calendar', 'start_time') %}
-        {% set tomorrow = (now() + timedelta(days=1)).date() %}
-
-        {# If no event or no start time #}
-        {% if not title or not start %}
-          No school events tomorrow.
-
-        {% else %}
-          {# Convert start_time to date #}
-          {% set event_date = as_datetime(start).date() %}
-
-          {% if event_date != tomorrow %}
-            No school events tomorrow.
-          {% else %}
-            {% set t = title | lower %}
-
-            {% if 'whole school' in t or 'food bank friday' in t or 'pta summer fair' in t %}
-              Whole‑school event tomorrow: {{ title }}
-
-            {% elif 'year 6' in t or 'years 5 & 6' in t %}
-              Year 6 event tomorrow: {{ title }}
-
-            {% elif 'class 6s' in t %}
-              Class 6S event tomorrow: {{ title }}
-
-            {% else %}
-              No school events tomorrow.
-            {% endif %}
-          {% endif %}
-        {% endif %}
+        {# Sandown's calendar was unsubscribed Aug 2026 (school moved to Goodwin).
+           No Goodwin whole-school-event calendar/newsletter feed exists yet --
+           that information currently only arrives via Goodwin's emails, not any
+           calendar. Real event detection here is blocked on that email-handling
+           project (parked separately, 2 Sep 2026). Until then this genuinely has
+           nothing to report beyond the boys' own lesson timetables. #}
+        No school events tomorrow.

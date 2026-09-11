@@ -1,0 +1,38 @@
+- sensor:
+    - name: School Panel Notifications
+      unique_id: school_panel_notifications
+      icon: mdi:alert-circle-outline
+      state: >-
+        {% set ns = namespace(items=[]) %}
+        {% for s in states.sensor %}
+          {% set entity = s.entity_id %}
+          {% set device_class = s.attributes.device_class | default('') %}
+          {% set lower_entity = entity | lower %}
+          {% set lower_name = s.name | lower %}
+          {% set excluded =
+            'phone' in lower_entity or
+            'mobile' in lower_entity or
+            'sm_a' in lower_entity or
+            'iphone' in lower_entity or
+            'ipad' in lower_entity or
+            lower_entity.endswith('_battery_state') or
+            lower_name.endswith('battery state') %}
+          {% set looks_like_battery =
+            device_class == 'battery' or
+            lower_entity.endswith('_battery') or
+            lower_entity.endswith('_battery_level') %}
+          {% set level = s.state | float(-1) %}
+          {% if looks_like_battery and not excluded and level >= 0 and level < 20 %}
+            {% set name = s.name
+              | replace(' Battery Level', '')
+              | replace(' battery level', '')
+              | replace(' Battery', '')
+              | replace(' battery', '') %}
+            {% set ns.items = ns.items + [name ~ ' ' ~ (level | round(0) | int) ~ '%'] %}
+          {% endif %}
+        {% endfor %}
+        {% if ns.items | length == 0 %}
+          SYSTEMS NOMINAL
+        {% else %}
+          LOW BATTERY: {{ ns.items[:3] | join(', ') }}{% if ns.items | length > 3 %} +{{ ns.items | length - 3 }}{% endif %}
+        {% endif %}
