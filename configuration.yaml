@@ -24,6 +24,13 @@ lovelace:
       show_in_sidebar: true
       filename: lovelace/cinematic-v2.yaml
 
+    cbj-lcars:
+      mode: yaml
+      title: CBJ LCARS
+      icon: mdi:rocket-launch
+      show_in_sidebar: true
+      filename: lovelace/cbj-lcars.yaml
+
 automation: !include automations.yaml
 script: !include scripts.yaml
 scene: !include scenes.yaml
@@ -70,15 +77,11 @@ homeassistant:
       device_class: illuminance
     sensor.diningroom_temp:
       device_class: temperature
-http:
-  ssl_certificate: /ssl/fullchain.pem
-  ssl_key: /ssl/privkey.pem
-  use_x_forwarded_for: true
-  trusted_proxies:
-    - 127.0.0.1
-    - 192.168.1.76
-    - 100.64.0.0/10
-    - 192.168.1.0/24
+
+sensor:
+  - platform: time_date
+    display_options:
+      - 'time'
 
 # ============================================================
 # Waste Collection Schedule – Source Configuration
@@ -88,6 +91,7 @@ waste_collection_schedule:
     - name: dover_gov_uk
       args:
         uprn: "10034882837"
+        postcode: "CT14 7BG"
       customize:
         - type: REFUSE
           alias: "Refuse Collection"
@@ -122,7 +126,7 @@ notify:
   - platform: group
     name: joseph_notify
     services:
-      - service: mobile_app_joseph
+      - service: mobile_app_joseph_phone
 
   - platform: group
     name: natalie_notify
@@ -157,8 +161,18 @@ recorder:
       - sensor.system_monitor_processor_use
       - sensor.system_monitor_memory_usage
       - sensor.system_monitor_processor_temperature
+      # Continuous mmWave/radar telemetry (Alarm Panel V2 test bed) — updates
+      # every 1-2 seconds, was the single biggest contributor to recorder DB growth
+      # (7GB / 15.6M states rows after 30 days). Underperforming sensors, not
+      # relied on for automations as of 2 Sep 2026 — excluded from history entirely.
+      - sensor.boys_room_bed_radar_state
+      - sensor.mmwave_test_bed_ld2410c_still_energy
+      - sensor.time
 
 input_boolean:
+  printer_paper_safe:
+    name: Printer Paper Safe (Normal Paper Loaded)
+    icon: mdi:printer-check
   alert_active:
     name: Alert Active
     icon: mdi:alert
@@ -171,6 +185,27 @@ input_boolean:
   youtube_block_enabled:
     name: YouTube Block Enabled
     icon: mdi:youtube-off
+  jacob_school_day:
+    name: Jacob School Day
+    icon: mdi:school
+  joseph_school_day:
+    name: Joseph School Day
+    icon: mdi:school
+  joseph_drink_confirmed:
+    name: joseph_drink_confirmed
+    icon: mdi:beer
+  joseph_pe_kit_confirmed:
+    name: joseph_pe_kit_confirmed
+    icon: mdi:soccer
+  joseph_pe_tomorrow:
+    name: joseph_pe_tomorrow
+    icon: mdi:calendar-alert
+  lcars_sound:
+    name: LCARS Sound
+    icon: mdi:volume-high
+  lcars_texture:
+    name: LCARS Texture
+    icon: mdi:texture-box
 
 input_button:
   start_jon_pc:
@@ -204,6 +239,20 @@ input_number:
     step: 1
     mode: box
     initial: 0
+  lcars_vertical:
+    name: LCARS Vertical
+    min: 26
+    max: 60
+    step: 1
+    mode: box
+    initial: 40
+  lcars_horizontal:
+    name: LCARS Horizontal
+    min: 6
+    max: 60
+    step: 1
+    mode: box
+    initial: 20
 
 timer:
   rotary_ui_timeout:
@@ -259,6 +308,34 @@ rest_command:
     method: POST
     username: "AlarmScr"
     password: "Month@2018"
+  alarm_panel_alert:
+    url: "http://192.168.20.113/alert"
+    method: POST
+    timeout: 10
+    username: "AlarmScr"
+    password: "Month@2018"
+    content_type: "application/json"
+    payload: '{"level":"{{ level | default("red") }}","source":"{{ source | default(message | default("ALERT")) }}","detail":"{{ detail | default("") }}"}'
+  school_panel_alert:
+    url: "http://192.168.20.115/alert"
+    method: POST
+    timeout: 10
+    username: "AlarmScr"
+    password: "Month@2018"
+    content_type: "application/json"
+    payload: '{"level":"{{ level | default("red") }}","source":"{{ source | default(message | default("ALERT")) }}","detail":"{{ detail | default("") }}"}'
+  alarm_panel_alert_clear:
+    url: "http://192.168.20.113/alert/clear"
+    method: POST
+    timeout: 10
+    username: "AlarmScr"
+    password: "Month@2018"
+  school_panel_alert_clear:
+    url: "http://192.168.20.115/alert/clear"
+    method: POST
+    timeout: 10
+    username: "AlarmScr"
+    password: "Month@2018"
   shutdown_jon_pc:
     url: "http://192.168.1.107:8000/?action=System.Shutdown"
     method: POST
@@ -295,7 +372,113 @@ shell_command:
   adguard_set_default_policy: "/config/scripts/adguard_set_policy.sh default"
   youtube_block_kids: "/config/scripts/adguard_set_policy.sh boys"
   youtube_unblock_kids: "/config/scripts/adguard_set_policy.sh kids"
+  printer_cups_disable: "/config/scripts/printer_cups_disable.sh"
+  printer_cups_enable: "/config/scripts/printer_cups_enable.sh"
+  printer_print_text: "/config/scripts/printer_print_text.sh {{ content_b64 }}"
+  printer_print_file: "/config/scripts/printer_print_file.sh {{ content_b64 }} {{ ext }}"
 
 # ============================================================
 # Kit Check + YouTube Block helpers
 # ============================================================
+
+# ============================================================
+# Dover DDC waste - raw API data (for missed collection detection)
+# Added 29 Aug 2026 alongside the dover_gov_uk source fix
+# ============================================================
+rest:
+  - resource: https://portal.waste.dover.gov.uk/api/getCollectionDays
+    method: POST
+    headers:
+      Content-Type: application/json
+    payload: '{"pointId": "1481345", "pointType": "PointAddress", "councilId": "39"}'
+    scan_interval: 21600
+    sensor:
+      - name: "Dover Waste Raw"
+        unique_id: dover_waste_raw
+        value_template: "{{ now().isoformat() }}"
+        json_attributes_path: "$"
+        json_attributes:
+          - activeServices
+
+  - resource: https://craftsbyjon.co.uk/api/ha-summary
+    method: GET
+    headers:
+      X-HA-Key: !secret cbj_ha_summary_key
+    scan_interval: 300
+    timeout: 15
+    sensor:
+      - name: CBJ Orders Today
+        unique_id: cbj_orders_today_count
+        value_template: "{{ value_json.orders.today_count }}"
+        icon: mdi:cart
+      - name: CBJ Orders Today Revenue
+        unique_id: cbj_orders_today_revenue
+        value_template: "{{ (value_json.orders.today_revenue_pence / 100) | round(2) }}"
+        unit_of_measurement: GBP
+        icon: mdi:cash
+      - name: CBJ Orders This Week
+        unique_id: cbj_orders_week_count
+        value_template: "{{ value_json.orders.week_count }}"
+        icon: mdi:cart-outline
+      - name: CBJ Orders This Week Revenue
+        unique_id: cbj_orders_week_revenue
+        value_template: "{{ (value_json.orders.week_revenue_pence / 100) | round(2) }}"
+        unit_of_measurement: GBP
+        icon: mdi:cash-multiple
+      - name: CBJ Total Orders
+        unique_id: cbj_orders_total
+        value_template: "{{ value_json.orders.total }}"
+        icon: mdi:receipt
+      - name: CBJ Total Revenue
+        unique_id: cbj_total_revenue
+        value_template: "{{ (value_json.orders.total_revenue_pence / 100) | round(2) }}"
+        unit_of_measurement: GBP
+        icon: mdi:cash-100
+      - name: CBJ Pending Dispatch
+        unique_id: cbj_pending_dispatch
+        value_template: "{{ value_json.orders.pending_dispatch_count }}"
+        icon: mdi:truck-outline
+      - name: CBJ Backorders
+        unique_id: cbj_backorders
+        value_template: "{{ value_json.orders.backorder_count }}"
+        icon: mdi:alert-box-outline
+      - name: CBJ Last Order
+        unique_id: cbj_last_order_at
+        value_template: "{{ value_json.orders.last_order_at }}"
+        device_class: timestamp
+        icon: mdi:clock-outline
+      - name: CBJ Low Stock Count
+        unique_id: cbj_low_stock_count
+        value_template: "{{ value_json.stock.low_stock_count }}"
+        json_attributes_path: "$.stock"
+        json_attributes:
+          - low_stock_ids
+          - out_of_stock_ids
+        icon: mdi:package-variant-minus
+      - name: CBJ Out Of Stock Count
+        unique_id: cbj_out_of_stock_count
+        value_template: "{{ value_json.stock.out_of_stock_count }}"
+        icon: mdi:package-variant-remove
+      - name: CBJ Live Products
+        unique_id: cbj_live_products
+        value_template: "{{ value_json.products.live_count }}"
+        icon: mdi:store-check
+      - name: CBJ Total Products
+        unique_id: cbj_total_products
+        value_template: "{{ value_json.products.total }}"
+        icon: mdi:store
+      - name: CBJ Open Tasks
+        unique_id: cbj_open_tasks
+        value_template: "{{ value_json.priorities.open_total }}"
+        icon: mdi:format-list-checks
+      - name: CBJ In Progress Tasks
+        unique_id: cbj_in_progress_tasks
+        value_template: "{{ value_json.priorities.in_progress }}"
+        icon: mdi:progress-clock
+      - name: CBJ Top Priority Task
+        unique_id: cbj_top_task
+        value_template: "{{ value_json.priorities.top_task_title | default('None', true) }}"
+        json_attributes_path: "$.priorities"
+        json_attributes:
+          - top_task_area
+        icon: mdi:star-outline

@@ -50,7 +50,7 @@
       message: Ablutions!!!
       title: School Reminder
     action: notify.jacob_notify
-  - action: notify.mobile_app_joseph
+  - action: notify.joseph_notify
     data:
       message: Ablutions!!!
       title: School Reminder
@@ -111,9 +111,7 @@
   actions:
   - action: notify.alexa_media_lounge_plus
     data:
-      message: 'Good morning everyone!  The time is {{ now().strftime(''%I:%M %p'')
-        }}. It''s {{ states(''sensor.bedroom_temperature'') | round(0) }} degrees
-        inside. Have a great day! '
+      message: 'Good morning everyone!  The time is {{ now().strftime(''%I:%M %p'') }}. It''s {{ states(''sensor.bedroom_temperature'') | round(0) }} degrees inside. Have a great day! '
       data:
         type: announce
 - alias: Dinner Time Announcement
@@ -153,9 +151,7 @@
   actions:
   - action: notify.alexa_media
     data:
-      message: "<speak>\n  <emphasis level=\"strong\">Attention! The home alarm has
-        been triggered!</emphasis>\n  <break time=\"500ms\"/>\n  Check all doors and
-        windows immediately!\n</speak>\n"
+      message: "<speak>\n  <emphasis level=\"strong\">Attention! The home alarm has been triggered!</emphasis>\n  <break time=\"500ms\"/>\n  Check all doors and windows immediately!\n</speak>\n"
       data:
         type: announce
         method: all
@@ -167,7 +163,7 @@
       - media_player.diningroom_dot
   - action: notify.mobile_app_jon_phone
     data:
-      title: "\U0001F6A8 Alarm Triggered!"
+      title: 🚨 Alarm Triggered!
       message: Home alarm has been triggered at {{ now().strftime('%I:%M %p') }}
       data:
         priority: high
@@ -187,14 +183,13 @@
   actions:
   - action: notify.alexa_media_lounge_plus
     data:
-      message: 'Reminder: The {{ trigger.to_state.attributes.friendly_name }}  has
-        been open for 10 minutes.  Please close it to save energy. '
+      message: 'Reminder: The {{ trigger.to_state.attributes.friendly_name }}  has been open for 10 minutes.  Please close it to save energy. '
       data:
         type: announce
   id: 3cac9d3385dd49cc90319bbb4d47ef76
 - id: bin_day_reminder
   alias: Bin Day Reminder
-  description: Remind to put bins out for collection
+  description: Remind to put bins out for collection, aware of which bin types are actually due
   triggers:
   - at: '20:00:00'
     trigger: time
@@ -202,22 +197,69 @@
   - condition: time
     weekday:
     - thu
+  - condition: template
+    value_template: '{{ active_bins | length > 0 }}'
+  variables:
+    bin_colours:
+      refuse:
+      - 64
+      - 64
+      - 64
+      recycling:
+      - 0
+      - 102
+      - 204
+      food:
+      - 34
+      - 139
+      - 34
+      papercard:
+      - 230
+      - 190
+      - 40
+    bin_friendly_names:
+      refuse: black bin
+      recycling: recycling
+      food: food caddy
+      papercard: paper and card
+    active_bins: '{{ [''refuse'' if is_state(''sensor.waste_has_refuse'', ''True'') else None, ''recycling'' if is_state(''sensor.waste_has_recycling'', ''True'') else None, ''food'' if is_state(''sensor.waste_has_food'', ''True'') else None, ''papercard'' if is_state(''sensor.waste_has_papercard'', ''True'') else None] | select(''string'') | list }}'
+    bin_summary: '{{ active_bins | map(''regex_replace'', ''^(.*)$'', '''') | list }}'
   actions:
   - action: input_boolean.turn_on
     target:
       entity_id: input_boolean.alert_active
-  - action: switch.turn_on
-    target:
-      entity_id: switch.bins_flash
+  - repeat:
+      for_each: '{{ active_bins }}'
+      sequence:
+      - action: light.turn_on
+        target:
+          entity_id: light.3dicons_rubbishbin
+        data:
+          rgb_color: '{{ bin_colours[repeat.item] }}'
+      - delay: 00:00:03
+  - if:
+    - condition: template
+      value_template: '{{ ''refuse'' in active_bins }}'
+    then:
+    - action: switch.turn_on
+      target:
+        entity_id: switch.bins_flash
+  - if:
+    - condition: template
+      value_template: '{{ ''recycling'' in active_bins }}'
+    then:
+    - action: switch.turn_on
+      target:
+        entity_id: switch.recycling_flash
   - action: notify.alexa_media_lounge_plus
     data:
-      message: 'Reminder: Tomorrow is bin day.  Please put the bins out for collection.'
+      message: '{{ ''Reminder: tomorrow\''s bin collection includes '' + (active_bins | map(''regex_replace'', ''^(refuse)$'', ''the black bin'') | map(''regex_replace'', ''^(recycling)$'', ''recycling'') | map(''regex_replace'', ''^(food)$'', ''the food caddy'') | map(''regex_replace'', ''^(papercard)$'', ''paper and card'') | join('', '')) + ''. Please put them out.'' }}'
       data:
         type: announce
   - action: notify.mobile_app_jon_phone
     data:
-      title: "\U0001F5D1️ Bin Day Tomorrow"
-      message: Don't forget to put the bins out!
+      title: 🗑️ Bin Day Tomorrow
+      message: '{{ active_bins | map(''regex_replace'', ''^(refuse)$'', ''Black bin'') | map(''regex_replace'', ''^(recycling)$'', ''Recycling'') | map(''regex_replace'', ''^(food)$'', ''Food caddy'') | map(''regex_replace'', ''^(papercard)$'', ''Paper/card'') | join('', '') }} due tomorrow. Don''t forget to put them out!'
   mode: single
 - id: aad83719661b40969efbb9725fd1be4a
   alias: Welcome Home Greeting
@@ -238,9 +280,7 @@
   actions:
   - action: notify.alexa_media_bedroom_dot
     data:
-      message: "Welcome home {{ trigger.to_state.attributes.friendly_name }}! {% if
-        now().hour < 12 %}\n  Good morning.\n{% elif now().hour < 18 %}\n  Good afternoon.\n{%
-        else %}\n  Good evening.\n{% endif %}\n"
+      message: "Welcome home {{ trigger.to_state.attributes.friendly_name }}! {% if now().hour < 12 %}\n  Good morning.\n{% elif now().hour < 18 %}\n  Good afternoon.\n{% else %}\n  Good evening.\n{% endif %}\n"
   - action: light.turn_on
     target:
       entity_id: light.hall_light
@@ -272,8 +312,7 @@
   actions:
   - action: notify.alexa_media_everywhere
     data:
-      message: 'Boys! Football practice reminder. Make sure you have your: Kit, Boots,
-        Water bottle, And shin pads ready! '
+      message: 'Boys! Football practice reminder. Make sure you have your: Kit, Boots, Water bottle, And shin pads ready! '
       data:
         type: announce
   - action: switch.turn_on
@@ -297,7 +336,7 @@
     - thu
     - fri
   - condition: state
-    entity_id: input_boolean.school_day
+    entity_id: input_boolean.jacob_school_day
     state: 'on'
   actions:
   - data:
@@ -313,9 +352,9 @@
   mode: single
 - id: '1769605762600'
   alias: Joseph Bags
-  description: Announce to Joseph at 8:05 AM on school days via Lounge Plus
+  description: Announce to Joseph at 8:00 AM on school days via Lounge Plus
   triggers:
-  - at: 08:05:00
+  - at: 08:00:00
     trigger: time
   conditions:
   - condition: time
@@ -326,7 +365,7 @@
     - thu
     - fri
   - condition: state
-    entity_id: input_boolean.school_day
+    entity_id: input_boolean.joseph_school_day
     state: 'on'
   actions:
   - action: conversation.process
@@ -336,17 +375,11 @@
       agent_id: conversation.bags
     response_variable: agent
   - variables:
-      joseph_bags_message: "{% set speech = agent.response.speech.plain.speech | default('',
-        true) %}\n{% set lower_speech = speech | lower %}\n{% if speech | trim ==
-        '' or 'problem getting a response' in lower_speech or 'google generative ai'
-        in lower_speech or 'unavailable' in lower_speech or '503' in lower_speech
-        or 'error' in lower_speech %}\n  Joseph, tiny plot twist: the joke machine
-        is asleep. Your school bag is not. Get it ready before it starts charging
-        rent in the hallway.\n{% else %}\n  {{ speech }}\n{% endif %}\n"
+      joseph_bags_message: "{% set speech = agent.response.speech.plain.speech | default('', true) %}\n{% set lower_speech = speech | lower %}\n{% if speech | trim == '' or 'problem getting a response' in lower_speech or 'google generative ai' in lower_speech or 'unavailable' in lower_speech or '503' in lower_speech or 'error' in lower_speech %}\n  Joseph, tiny plot twist: the joke machine is asleep. Your school bag is not. Get it ready before it starts charging rent in the hallway.\n{% else %}\n  {{ speech }}\n{% endif %}\n"
   - action: notify.alexa_media_lounge_plus
     data:
       message: '{{ joseph_bags_message }}'
-  - action: notify.mobile_app_joseph
+  - action: notify.joseph_notify
     data:
       message: '{{ joseph_bags_message }}'
       title: School Reminder
@@ -367,8 +400,7 @@
     - thu
     - fri
   - condition: template
-    value_template: '{{ states.media_player.bedroom_speaker_2.last_changed < today_at("10:00")
-      }} '
+    value_template: '{{ states.media_player.bedroom_speaker_2.last_changed < today_at("10:00") }} '
   actions:
   - action: media_player.volume_set
     metadata: {}
@@ -398,79 +430,31 @@
     entity_id: input_boolean.school_day
     state: 'on'
   - condition: template
-    value_template: '{% set school_text = (states(''input_text.boys_school'') ~ ''
-      '' ~ (state_attr(''calendar.sandown_school_calendar'', ''message'') | default('''',
-      true))) | lower %} {{ ''holiday'' not in school_text and ''half term'' not in
-      school_text and ''half-term'' not in school_text and ''inset'' not in school_text
-      and ''bank'' not in school_text }}'
+    value_template: '{% set school_text = (states(''input_text.boys_school'') ~ '' '' ~ (state_attr(''calendar.jacob_timetable'', ''message'') | default('''', true)) ~ '' '' ~ (state_attr(''calendar.joseph_timetable'', ''message'') | default('''', true))) | lower %} {{ ''holiday'' not in school_text and ''half term'' not in school_text and ''half-term'' not in school_text and ''inset'' not in school_text and ''bank'' not in school_text }}'
   actions:
   - action: weather.get_forecasts
     metadata: {}
     target:
-      entity_id: "{% if has_value('weather.met_office_deal') %}\n  weather.met_office_deal\n{%
-        elif has_value('weather.home_weather') %}\n  weather.home_weather\n{% elif
-        has_value('weather.forecast_home') %}\n  weather.forecast_home\n{% else %}\n
-        \ weather.pirateweather\n{% endif %}\n"
+      entity_id: "{% if has_value('weather.met_office_deal') %}\n  weather.met_office_deal\n{% elif has_value('weather.home_weather') %}\n  weather.home_weather\n{% elif has_value('weather.forecast_home') %}\n  weather.forecast_home\n{% else %}\n  weather.pirateweather\n{% endif %}\n"
     data:
       type: daily
     response_variable: daily_forecast
   - action: conversation.process
     metadata: {}
     data:
-      text: 'You are an advanced smart home with a built in personal weather station.
-        Weather updates will be spoken out loud and should be funny and creative because
-        two children 11 years old and 14 years old will be listening. Please use whole
-        numbers and try to make it educational! This should be less than 30 seconds
-        in length. it is important that the school update comes first {% if states(''sensor.school_event_today'')
-        %} School Update: {{ states(''sensor.school_event_today'') }} {% endif %}
-        Current Conditions: Current time is {{ now().strftime(''%I:%M %p'') }}. Temperature
-        is {% if has_value(''sensor.met_office_deal_temperature'') %}{{ states(''sensor.met_office_deal_temperature'')
-        | round(0) }}°C{% elif has_value(''weather.home_weather'') %}{{ state_attr(''weather.home_weather'',
-        ''temperature'') | round(0) }}°C{% elif has_value(''weather.forecast_home'')
-        %}{{ state_attr(''weather.forecast_home'', ''temperature'') | round(0) }}°C{%
-        else %}{{ states(''sensor.pirateweather_temperature'') | round(0) }}°C{% endif
-        %}. Feels like {% if has_value(''sensor.pirateweather_apparent_temperature'')
-        %}{{ states(''sensor.pirateweather_apparent_temperature'') | round(0) }}°C{%
-        elif has_value(''weather.forecast_home'') %}{{ state_attr(''weather.forecast_home'',
-        ''dew_point'') | round(0) }}°C{% else %}the same{% endif %}. Humidity is {%
-        if has_value(''weather.pirateweather'') %}{{ state_attr(''weather.pirateweather'',
-        ''humidity'') | round(0) }}%{% elif has_value(''weather.met_office_deal'')
-        %}{{ state_attr(''weather.met_office_deal'', ''humidity'') | round(0) }}%{%
-        elif has_value(''weather.home_weather'') %}{{ state_attr(''weather.home_weather'',
-        ''humidity'') | round(0) }}%{% elif has_value(''weather.forecast_home'') %}{{
-        state_attr(''weather.forecast_home'', ''humidity'') | round(0) }}%{% endif
-        %}. {% if has_value(''sensor.pirateweather_uv_index'') %}UV Index is {{ states(''sensor.pirateweather_uv_index'')
-        | round(0) }}.{% elif has_value(''weather.forecast_home'') %}UV Index is {{
-        state_attr(''weather.forecast_home'', ''uv_index'') | round(1) }}.{% endif
-        %} Current conditions: {% if has_value(''weather.met_office_deal'') %}{{ states(''weather.met_office_deal'')
-        }}{% elif has_value(''weather.home_weather'') %}{{ states(''weather.home_weather'')
-        }}{% elif has_value(''weather.forecast_home'') %}{{ states(''weather.forecast_home'')
-        }}{% else %}{{ states(''weather.pirateweather'') }}{% endif %}. Today''s Forecast:
-        {% if has_value(''sensor.pirateweather_hourly_summary'') %}Forecasted Conditions
-        for Today {{ states(''sensor.pirateweather_hourly_summary'') }}{% endif %}
-        {% set forecast_entity = ''weather.met_office_deal'' if has_value(''weather.met_office_deal'')
-        else ''weather.home_weather'' if has_value(''weather.home_weather'') else
-        ''weather.forecast_home'' if has_value(''weather.forecast_home'') else ''weather.pirateweather''
-        %} Temperature for Today {{ daily_forecast[forecast_entity].forecast[0].temperature
-        }} Forecasted Low Temperature for Today {{ daily_forecast[forecast_entity].forecast[0].templow
-        }} Forecasted Precipitation Probability {{ daily_forecast[forecast_entity].forecast[0].precipitation_probability
-        }} {% set pollen_level = state_attr(''weather.silam_pollen_home_forecast'',
-        ''next_condition'') %}{% set pollen_culprit = state_attr(''weather.silam_pollen_home_forecast'',
-        ''responsible_elevated'') %}{% if pollen_level in [''medium'', ''high'', ''very_high'']
-        %}Pollen Alert: {{ pollen_level }} levels today, mainly {{ pollen_culprit
-        }}.{% endif %} '
+      text: 'You are an advanced smart home with a built in personal weather station. Weather updates will be spoken out loud and should be funny and creative because two children 11 years old and 14 years old will be listening. Please use whole numbers and try to make it educational! This should be less than 30 seconds in length. it is important that the school update comes first {% if states(''sensor.school_event_today'') %} School Update: {{ states(''sensor.school_event_today'') }} {% endif %} Current Conditions: Current time is {{ now().strftime(''%I:%M %p'') }}. Temperature is {% if has_value(''sensor.met_office_deal_temperature'') %}{{ states(''sensor.met_office_deal_temperature'') | round(0) }}°C{% elif has_value(''weather.home_weather'') %}{{ state_attr(''weather.home_weather'', ''temperature'') | round(0) }}°C{% elif has_value(''weather.forecast_home'') %}{{ state_attr(''weather.forecast_home'', ''temperature'') | round(0) }}°C{% else %}{{ states(''sensor.pirateweather_temperature'')
+        | round(0) }}°C{% endif %}. Feels like {% if has_value(''sensor.pirateweather_apparent_temperature'') %}{{ states(''sensor.pirateweather_apparent_temperature'') | round(0) }}°C{% elif has_value(''weather.forecast_home'') %}{{ state_attr(''weather.forecast_home'', ''dew_point'') | round(0) }}°C{% else %}the same{% endif %}. Humidity is {% if has_value(''weather.pirateweather'') %}{{ state_attr(''weather.pirateweather'', ''humidity'') | round(0) }}%{% elif has_value(''weather.met_office_deal'') %}{{ state_attr(''weather.met_office_deal'', ''humidity'') | round(0) }}%{% elif has_value(''weather.home_weather'') %}{{ state_attr(''weather.home_weather'', ''humidity'') | round(0) }}%{% elif has_value(''weather.forecast_home'') %}{{ state_attr(''weather.forecast_home'', ''humidity'') | round(0) }}%{% endif %}. {% if has_value(''sensor.pirateweather_uv_index'') %}UV Index is {{ states(''sensor.pirateweather_uv_index'') | round(0) }}.{% elif has_value(''weather.forecast_home'') %}UV Index
+        is {{ state_attr(''weather.forecast_home'', ''uv_index'') | round(1) }}.{% endif %} Current conditions: {% if has_value(''weather.met_office_deal'') %}{{ states(''weather.met_office_deal'') }}{% elif has_value(''weather.home_weather'') %}{{ states(''weather.home_weather'') }}{% elif has_value(''weather.forecast_home'') %}{{ states(''weather.forecast_home'') }}{% else %}{{ states(''weather.pirateweather'') }}{% endif %}. Today''s Forecast: {% if has_value(''sensor.pirateweather_hourly_summary'') %}Forecasted Conditions for Today {{ states(''sensor.pirateweather_hourly_summary'') }}{% endif %} {% set forecast_entity = ''weather.met_office_deal'' if has_value(''weather.met_office_deal'') else ''weather.home_weather'' if has_value(''weather.home_weather'') else ''weather.forecast_home'' if has_value(''weather.forecast_home'') else ''weather.pirateweather'' %} Temperature for Today {{ daily_forecast[forecast_entity].forecast[0].temperature }} Forecasted Low Temperature for Today {{ daily_forecast[forecast_entity].forecast[0].templow
+        }} Forecasted Precipitation Probability {{ daily_forecast[forecast_entity].forecast[0].precipitation_probability }} {% set pollen_level = state_attr(''weather.silam_pollen_home_forecast'', ''next_condition'') %}{% set pollen_culprit = state_attr(''weather.silam_pollen_home_forecast'', ''responsible_elevated'') %}{% if pollen_level in [''medium'', ''high'', ''very_high''] %}Pollen Alert: {{ pollen_level }} levels today, mainly {{ pollen_culprit }}.{% endif %} '
       agent_id: conversation.kids_weather
     response_variable: agent
   - if:
     - condition: template
-      value_template: '{% set speech = agent.response.speech.plain.speech | default('''',
-        true) %}
+      value_template: '{% set speech = agent.response.speech.plain.speech | default('''', true) %}
 
         {% set lower_speech = speech | lower %}
 
-        {{ speech | trim == '''' or ''problem getting a response'' in lower_speech
-        or ''google generative ai'' in lower_speech or ''unavailable'' in lower_speech
-        or ''503'' in lower_speech or ''error'' in lower_speech }}
+        {{ speech | trim == '''' or ''problem getting a response'' in lower_speech or ''google generative ai'' in lower_speech or ''unavailable'' in lower_speech or ''503'' in lower_speech or ''error'' in lower_speech }}
 
         '
     then:
@@ -478,27 +462,11 @@
     - action: conversation.process
       metadata: {}
       data:
-        text: 'Write a short, funny school-morning weather announcement for Jacob
-          and Joseph. Keep it under 30 seconds. School update first: {{ states(''sensor.school_event_today'')
-          }}. Current weather is {{ states(''weather.met_office_deal'') if has_value(''weather.met_office_deal'')
-          else states(''weather.home_weather'') if has_value(''weather.home_weather'')
-          else states(''weather.forecast_home'') if has_value(''weather.forecast_home'')
-          else states(''weather.pirateweather'') }}. Temperature is {{ states(''sensor.met_office_deal_temperature'')
-          if has_value(''sensor.met_office_deal_temperature'') else state_attr(''weather.home_weather'',
-          ''temperature'') if has_value(''weather.home_weather'') else state_attr(''weather.forecast_home'',
-          ''temperature'') if has_value(''weather.forecast_home'') else states(''sensor.pirateweather_temperature'')
-          }} degrees C. Mention coats, rain, or sun if useful.'
+        text: 'Write a short, funny school-morning weather announcement for Jacob and Joseph. Keep it under 30 seconds. School update first: {{ states(''sensor.school_event_today'') }}. Current weather is {{ states(''weather.met_office_deal'') if has_value(''weather.met_office_deal'') else states(''weather.home_weather'') if has_value(''weather.home_weather'') else states(''weather.forecast_home'') if has_value(''weather.forecast_home'') else states(''weather.pirateweather'') }}. Temperature is {{ states(''sensor.met_office_deal_temperature'') if has_value(''sensor.met_office_deal_temperature'') else state_attr(''weather.home_weather'', ''temperature'') if has_value(''weather.home_weather'') else state_attr(''weather.forecast_home'', ''temperature'') if has_value(''weather.forecast_home'') else states(''sensor.pirateweather_temperature'') }} degrees C. Mention coats, rain, or sun if useful.'
         agent_id: conversation.kids_weather
       response_variable: agent
   - variables:
-      kids_weather_message: "{% set speech = agent.response.speech.plain.speech |
-        default('', true) %}\n{% set lower_speech = speech | lower %}\n{% if speech
-        | trim == '' or 'problem getting a response' in lower_speech or 'google generative
-        ai' in lower_speech or 'unavailable' in lower_speech or '503' in lower_speech
-        or 'error' in lower_speech %}\n  Morning team. The fancy weather robot is
-        having a lie-in, so here is the practical version: check the sky, grab your
-        school bags, and take a coat if it looks even slightly suspicious outside.\n{%
-        else %}\n  {{ speech }}\n{% endif %}\n"
+      kids_weather_message: "{% set speech = agent.response.speech.plain.speech | default('', true) %}\n{% set lower_speech = speech | lower %}\n{% if speech | trim == '' or 'problem getting a response' in lower_speech or 'google generative ai' in lower_speech or 'unavailable' in lower_speech or '503' in lower_speech or 'error' in lower_speech %}\n  Morning team. The fancy weather robot is having a lie-in, so here is the practical version: check the sky, grab your school bags, and take a coat if it looks even slightly suspicious outside.\n{% else %}\n  {{ speech }}\n{% endif %}\n"
   - action: notify.alexa_media
     data:
       message: '{{ kids_weather_message }}'
@@ -518,8 +486,7 @@
   mode: single
 - id: jacob_school_evening_prep
   alias: Jacob school evening prep
-  description: Evening school prep with AI announcement, PE detection, YouTube block,
-    and actionable notifications
+  description: Evening school prep with AI announcement, PE detection, YouTube block, and actionable notifications
   triggers:
   - trigger: time
     at: '19:00:00'
@@ -534,18 +501,16 @@
   actions:
   - action: calendar.get_events
     target:
-      entity_id: calendar.sandown_school_calendar
+      entity_id:
+      - calendar.jacob_timetable
+      - calendar.joseph_timetable
     data:
-      start_date_time: '{{ (now().date() + timedelta(days=1)).strftime(''%Y-%m-%d'')
-        }} 00:00:00'
-      end_date_time: '{{ (now().date() + timedelta(days=1)).strftime(''%Y-%m-%d'')
-        }} 23:59:59'
+      start_date_time: '{{ (now().date() + timedelta(days=1)).strftime(''%Y-%m-%d'') }} 00:00:00'
+      end_date_time: '{{ (now().date() + timedelta(days=1)).strftime(''%Y-%m-%d'') }} 23:59:59'
     response_variable: tomorrow_school_events
   - if:
     - condition: template
-      value_template: '{{ (now().date() + timedelta(days=1)).weekday() >= 5 or tomorrow_school_events[''calendar.sandown_school_calendar''][''events'']
-        | selectattr(''summary'', ''search'', ''holiday|half\s*-?\s*term|inset|bank'',
-        ignorecase=True) | list | count > 0 }}'
+      value_template: '{{ (now().date() + timedelta(days=1)).weekday() >= 5 or (tomorrow_school_events[''calendar.jacob_timetable''][''events'']) | selectattr(''summary'', ''search'', ''holiday|half\s*-?\s*term|inset|bank'', ignorecase=True) | list | count > 0 }}'
     then:
     - stop: Tomorrow is not a school day
   - action: input_boolean.turn_off
@@ -561,70 +526,41 @@
       - calendar.boys_school
       - calendar.jacob_timetable
     data:
-      start_date_time: '{{ (now().date() + timedelta(days=1)).strftime(''%Y-%m-%d'')
-        }} 00:00:00'
-      end_date_time: '{{ (now().date() + timedelta(days=1)).strftime(''%Y-%m-%d'')
-        }} 23:59:59'
+      start_date_time: '{{ (now().date() + timedelta(days=1)).strftime(''%Y-%m-%d'') }} 00:00:00'
+      end_date_time: '{{ (now().date() + timedelta(days=1)).strftime(''%Y-%m-%d'') }} 23:59:59'
     response_variable: school_events
   - if:
     - condition: template
-      value_template: '{{ (school_events[''calendar.boys_school''][''events''] + school_events[''calendar.jacob_timetable''][''events''])
-        | selectattr(''summary'', ''search'', ''PE'', ignorecase=True) | list | count
-        > 0 }}'
+      value_template: '{{ (school_events[''calendar.boys_school''][''events''] + school_events[''calendar.jacob_timetable''][''events'']) | selectattr(''summary'', ''search'', ''PE'', ignorecase=True) | list | count > 0 }}'
     then:
     - action: input_boolean.turn_on
       target:
         entity_id: input_boolean.jacob_pe_tomorrow
   - variables:
-      sandown_event_text: "{% set evts = tomorrow_school_events['calendar.sandown_school_calendar']['events']\n
-        \ | selectattr('summary', 'search', 'whole school|year 6|class 6s|food bank
-        friday|pta summer fair|years 5 & 6', ignorecase=True) | list %}\n{{ evts |
-        map(attribute='summary') | join('; ') }}"
-      jacob_school_event_text: '{% set evts = school_events[''calendar.boys_school''][''events'']
-        %} {{ evts | map(attribute=''summary'') | join(''; '') }}'
+      # sandown_event_text removed 2 Sep 2026: Sandown's calendar was unsubscribed
+      # Aug 2026 (school moved to Goodwin). No Goodwin whole-school-event
+      # calendar/newsletter feed exists to replace it -- that information
+      # currently only arrives via Goodwin's emails, not any calendar. Real
+      # event detection here is blocked on that email-handling project
+      # (parked separately, 2 Sep 2026).
+      jacob_school_event_text: '{% set evts = school_events[''calendar.boys_school''][''events''] %} {{ evts | map(attribute=''summary'') | join(''; '') }}'
   - action: conversation.process
     data:
       agent_id: conversation.evening_prep
-      text: 'Write a short evening school prep announcement for both boys. School
-        is tomorrow. They need bags packed, homework done. Jacob needs a drink bottle
-        in the fridge. {% if is_state(''input_boolean.jacob_pe_tomorrow'', ''on'')
-        %} Jacob also has PE tomorrow and needs his PE kit ready. {% endif %} {% if
-        sandown_event_text | trim != '''' %} There is a whole-school or Year 6 event
-        tomorrow: {{ sandown_event_text }}. {% endif %} {% if jacob_school_event_text
-        | trim != '''' %} Jacob also has: {{ jacob_school_event_text }}. {% endif
-        %} At the end, add one short sentence warning that a YouTube block is coming
-        soon for anyone who doesn''t confirm their kit is sorted. Style: chaotic dad
-        humour, dry sarcasm, short punchy sentences. No emojis. No baby talk. Address
-        both boys directly.'
+      text: 'Write a short evening school prep announcement for both boys. School is tomorrow. They need bags packed, homework done. Jacob needs a drink bottle in the fridge. {% if is_state(''input_boolean.jacob_pe_tomorrow'', ''on'') %} Jacob also has PE tomorrow and needs his PE kit ready. {% endif %} {% if jacob_school_event_text | trim != '''' %} Jacob also has: {{ jacob_school_event_text }}. {% endif %} At the end, add one short sentence warning that a YouTube block is coming soon for anyone who doesn''t confirm their kit is sorted. Style: chaotic dad humour, dry sarcasm, short punchy sentences. No emojis. No baby talk. Address both boys directly.'
     response_variable: agent_response
   - if:
     - condition: template
-      value_template: '{% set speech = agent_response.response.speech.plain.speech
-        | default('''', true) %}{% set lower_speech = speech | lower %}{{ speech |
-        trim == '''' or ''problem getting a response'' in lower_speech or ''google
-        generative ai'' in lower_speech or ''unavailable'' in lower_speech or ''503''
-        in lower_speech or ''error'' in lower_speech }}'
+      value_template: '{% set speech = agent_response.response.speech.plain.speech | default('''', true) %}{% set lower_speech = speech | lower %}{{ speech | trim == '''' or ''problem getting a response'' in lower_speech or ''google generative ai'' in lower_speech or ''unavailable'' in lower_speech or ''503'' in lower_speech or ''error'' in lower_speech }}'
     then:
     - delay: 00:00:30
     - action: conversation.process
       data:
         agent_id: conversation.evening_prep
-        text: 'Try again. Write a short evening school prep announcement for both
-          boys. School is tomorrow. Bags packed, homework done, Jacob drink bottle
-          in the fridge. {% if is_state(''input_boolean.jacob_pe_tomorrow'', ''on'')
-          %} Jacob has PE tomorrow and needs his kit ready. {% endif %} End with a
-          warning that a YouTube block is coming soon for anyone not sorted. Style:
-          chaotic dad humour, dry sarcasm, short punchy sentences. No emojis.'
+        text: 'Try again. Write a short evening school prep announcement for both boys. School is tomorrow. Bags packed, homework done, Jacob drink bottle in the fridge. {% if is_state(''input_boolean.jacob_pe_tomorrow'', ''on'') %} Jacob has PE tomorrow and needs his kit ready. {% endif %} End with a warning that a YouTube block is coming soon for anyone not sorted. Style: chaotic dad humour, dry sarcasm, short punchy sentences. No emojis.'
       response_variable: agent_response
   - variables:
-      evening_prep_message: '{% set speech = agent_response.response.speech.plain.speech
-        | default('''', true) %}{% set lower_speech = speech | lower %}{% if speech
-        | trim == '''' or ''problem getting a response'' in lower_speech or ''google
-        generative ai'' in lower_speech or ''unavailable'' in lower_speech or ''503''
-        in lower_speech or ''error'' in lower_speech %}Evening school prep. Bags packed,
-        homework checked, uniforms found, and Jacob''s drink bottle in the fridge.
-        Sort it out — YouTube block incoming for anyone who doesn''t.{% else %}{{
-        speech }}{% endif %}'
+      evening_prep_message: '{% set speech = agent_response.response.speech.plain.speech | default('''', true) %}{% set lower_speech = speech | lower %}{% if speech | trim == '''' or ''problem getting a response'' in lower_speech or ''google generative ai'' in lower_speech or ''unavailable'' in lower_speech or ''503'' in lower_speech or ''error'' in lower_speech %}Evening school prep. Bags packed, homework checked, uniforms found, and Jacob''s drink bottle in the fridge. Sort it out — YouTube block incoming for anyone who doesn''t.{% else %}{{ speech }}{% endif %}'
   - action: notify.alexa_media
     data:
       message: '{{ evening_prep_message }}'
@@ -689,7 +625,7 @@
     then:
     - action: notify.mobile_app_jon_phone
       data:
-        title: "\U0001F392 Kit Check Active"
+        title: 🎒 Kit Check Active
         message: YouTube, TikTok & Facebook blocked. Tap to unblock once kit is confirmed.
         data:
           actions:
@@ -697,7 +633,7 @@
             title: ✅ All sorted — unblock
     - action: notify.mobile_app_sm_a566b
       data:
-        title: "\U0001F392 Kit Check Active"
+        title: 🎒 Kit Check Active
         message: YouTube, TikTok & Facebook blocked. Tap to unblock once kit is confirmed.
         data:
           actions:
@@ -705,7 +641,7 @@
             title: ✅ All sorted — unblock
     - action: rest_command.home_api_notify
       data:
-        title: "\U0001F392 Kit Check Active"
+        title: 🎒 Kit Check Active
         body: YouTube, TikTok & Facebook blocked. Tap to unblock once the boys' kit is sorted.
         data: '{"action": "KIT_CHECK_DONE"}'
   mode: single
@@ -729,7 +665,7 @@
     - wed
     - thu
   - condition: state
-    entity_id: input_boolean.school_day
+    entity_id: input_boolean.jacob_school_day
     state: 'on'
   - condition: or
     conditions:
@@ -753,8 +689,7 @@
     - action: notify.jacob_notify
       data:
         title: Still waiting...
-        message: 'Jacob. The drink bottle. Still no answer. Fridge. Bottle. How many.
-          Simple question. '
+        message: 'Jacob. The drink bottle. Still no answer. Fridge. Bottle. How many. Simple question. '
         data:
           actions:
           - action: JACOB_DRINK_ONE
@@ -776,8 +711,7 @@
     - action: notify.jacob_notify
       data:
         title: PE kit. Again.
-        message: 'Jacob. PE tomorrow. Your kit. Still no confirmation. Is it ready
-          or not. Yes or no. That''s it. '
+        message: 'Jacob. PE tomorrow. Your kit. Still no confirmation. Is it ready or not. Yes or no. That''s it. '
         data:
           actions:
           - action: JACOB_PE_DONE
@@ -859,10 +793,329 @@
       - input_boolean.jacob_drink_confirmed
       - input_boolean.jacob_pe_kit_confirmed
       - input_boolean.jacob_pe_tomorrow
+- id: joseph_school_evening_prep
+  alias: Joseph school evening prep
+  description: Evening school prep with AI announcement, PE detection, YouTube block, and actionable notifications (mirrors Jacob's, scoped to Joseph)
+  triggers:
+  - trigger: time
+    at: '19:00:00'
+  conditions:
+  - condition: time
+    weekday:
+    - sun
+    - mon
+    - tue
+    - wed
+    - thu
+  actions:
+  - action: calendar.get_events
+    target:
+      entity_id:
+      - calendar.jacob_timetable
+      - calendar.joseph_timetable
+    data:
+      start_date_time: '{{ (now().date() + timedelta(days=1)).strftime(''%Y-%m-%d'') }} 00:00:00'
+      end_date_time: '{{ (now().date() + timedelta(days=1)).strftime(''%Y-%m-%d'') }} 23:59:59'
+    response_variable: tomorrow_school_events
+  - if:
+    - condition: template
+      value_template: '{{ (now().date() + timedelta(days=1)).weekday() >= 5 or (tomorrow_school_events[''calendar.joseph_timetable''][''events'']) | selectattr(''summary'', ''search'', ''holiday|half\s*-?\s*term|inset|bank'', ignorecase=True) | list | count > 0 }}'
+    then:
+    - stop: Tomorrow is not a school day
+  - action: input_boolean.turn_off
+    target:
+      entity_id:
+      - input_boolean.joseph_drink_confirmed
+      - input_boolean.joseph_pe_kit_confirmed
+      - input_boolean.joseph_pe_tomorrow
+      - input_boolean.kit_check_active
+  - action: calendar.get_events
+    target:
+      entity_id:
+      - calendar.boys_school
+      - calendar.joseph_timetable
+    data:
+      start_date_time: '{{ (now().date() + timedelta(days=1)).strftime(''%Y-%m-%d'') }} 00:00:00'
+      end_date_time: '{{ (now().date() + timedelta(days=1)).strftime(''%Y-%m-%d'') }} 23:59:59'
+    response_variable: school_events
+  - if:
+    - condition: template
+      value_template: '{{ (school_events[''calendar.boys_school''][''events''] + school_events[''calendar.joseph_timetable''][''events'']) | selectattr(''summary'', ''search'', ''PE'', ignorecase=True) | list | count > 0 }}'
+    then:
+    - action: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.joseph_pe_tomorrow
+  - variables:
+      joseph_school_event_text: '{% set evts = school_events[''calendar.boys_school''][''events''] %} {{ evts | map(attribute=''summary'') | join(''; '') }}'
+  - action: conversation.process
+    data:
+      agent_id: conversation.evening_prep
+      text: 'Write a short evening school prep announcement for both boys. School is tomorrow for Joseph. They need bags packed, homework done, and a drink bottle in the fridge. {% if is_state(''input_boolean.joseph_pe_tomorrow'', ''on'') %} Joseph also has PE tomorrow and needs his PE kit ready. {% endif %} {% if joseph_school_event_text | trim != '''' %} Joseph also has: {{ joseph_school_event_text }}. {% endif %} At the end, add one short sentence warning that a YouTube block is coming soon for anyone who doesn''t confirm their kit is sorted. Style: chaotic dad humour, dry sarcasm, short punchy sentences. No emojis. No baby talk. Address both boys directly.'
+    response_variable: agent_response
+  - if:
+    - condition: template
+      value_template: '{% set speech = agent_response.response.speech.plain.speech | default('''', true) %}{% set lower_speech = speech | lower %}{{ speech | trim == '''' or ''problem getting a response'' in lower_speech or ''google generative ai'' in lower_speech or ''unavailable'' in lower_speech or ''503'' in lower_speech or ''error'' in lower_speech }}'
+    then:
+    - delay: 00:00:30
+    - action: conversation.process
+      data:
+        agent_id: conversation.evening_prep
+        text: 'Try again. Write a short evening school prep announcement for both boys. School is tomorrow for Joseph. Bags packed, homework done, drink bottle in the fridge. {% if is_state(''input_boolean.joseph_pe_tomorrow'', ''on'') %} Joseph has PE tomorrow and needs his kit ready. {% endif %} End with a warning that a YouTube block is coming soon for anyone not sorted. Style: chaotic dad humour, dry sarcasm, short punchy sentences. No emojis.'
+      response_variable: agent_response
+  - variables:
+      evening_prep_message: '{% set speech = agent_response.response.speech.plain.speech | default('''', true) %}{% set lower_speech = speech | lower %}{% if speech | trim == '''' or ''problem getting a response'' in lower_speech or ''google generative ai'' in lower_speech or ''unavailable'' in lower_speech or ''503'' in lower_speech or ''error'' in lower_speech %}Evening school prep. Bags packed, homework checked, uniforms found, and a drink bottle in the fridge. Sort it out — YouTube block incoming for anyone who doesn''t.{% else %}{{ speech }}{% endif %}'
+  - action: notify.alexa_media
+    data:
+      message: '{{ evening_prep_message }}'
+      target:
+      - media_player.lounge_plus
+      - media_player.boy_s_new_dot
+      - media_player.bedroom_dot
+      - media_player.kitchen_dot
+      data:
+        type: announce
+        volume: 0.5
+        method: all
+  - if:
+    - condition: state
+      entity_id: input_boolean.youtube_block_enabled
+      state: 'on'
+    then:
+    - action: shell_command.youtube_block_kids
+      response_variable: block_result
+    - action: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.kit_check_active
+  - action: notify.jacob_notify
+    data:
+      title: School Prep
+      message: '{{ evening_prep_message }}'
+  - action: notify.joseph_notify
+    data:
+      title: School Prep
+      message: '{{ evening_prep_message }}'
+  - action: notify.joseph_notify
+    data:
+      title: Drink bottles
+      message: Joseph. How many drink bottles have you got in the fridge for tomorrow?
+      data:
+        actions:
+        - action: JOSEPH_DRINK_ONE
+          title: 1 bottle
+        - action: JOSEPH_DRINK_TWO
+          title: 2 bottles
+        - action: JOSEPH_DRINK_NONE
+          title: None yet
+  - if:
+    - condition: state
+      entity_id: input_boolean.joseph_pe_tomorrow
+      state: 'on'
+    then:
+    - action: notify.joseph_notify
+      data:
+        title: PE kit
+        message: Joseph. PE tomorrow. Is your kit sorted?
+        data:
+          actions:
+          - action: JOSEPH_PE_DONE
+            title: Yes sorted
+          - action: JOSEPH_PE_NOT_YET
+            title: Not yet
+  - if:
+    - condition: state
+      entity_id: input_boolean.youtube_block_enabled
+      state: 'on'
+    then:
+    - action: notify.mobile_app_jon_phone
+      data:
+        title: 🎒 Kit Check Active
+        message: YouTube, TikTok & Facebook blocked. Tap to unblock once kit is confirmed.
+        data:
+          actions:
+          - action: KIT_CHECK_DONE
+            title: ✅ All sorted — unblock
+    - action: notify.mobile_app_sm_a566b
+      data:
+        title: 🎒 Kit Check Active
+        message: YouTube, TikTok & Facebook blocked. Tap to unblock once kit is confirmed.
+        data:
+          actions:
+          - action: KIT_CHECK_DONE
+            title: ✅ All sorted — unblock
+    - action: rest_command.home_api_notify
+      data:
+        title: 🎒 Kit Check Active
+        body: YouTube, TikTok & Facebook blocked. Tap to unblock once the boys' kit is sorted.
+        data: '{"action": "KIT_CHECK_DONE"}'
+  mode: single
+- id: joseph_task_nagger
+  alias: Joseph task nagger
+  description: Reminds Joseph every 30 mins if tasks are still unconfirmed
+  mode: single
+  triggers:
+  - trigger: time
+    at:
+    - '19:30:00'
+    - '20:00:00'
+    - '20:30:00'
+    - '21:00:00'
+  conditions:
+  - condition: time
+    weekday:
+    - sun
+    - mon
+    - tue
+    - wed
+    - thu
+  - condition: state
+    entity_id: input_boolean.joseph_school_day
+    state: 'on'
+  - condition: or
+    conditions:
+    - condition: state
+      entity_id: input_boolean.joseph_drink_confirmed
+      state: 'off'
+    - condition: and
+      conditions:
+      - condition: state
+        entity_id: input_boolean.joseph_pe_tomorrow
+        state: 'on'
+      - condition: state
+        entity_id: input_boolean.joseph_pe_kit_confirmed
+        state: 'off'
+  actions:
+  - if:
+    - condition: state
+      entity_id: input_boolean.joseph_drink_confirmed
+      state: 'off'
+    then:
+    - action: notify.joseph_notify
+      data:
+        title: Still waiting...
+        message: 'Joseph. The drink bottle. Still no answer. Fridge. Bottle. How many. Simple question. '
+        data:
+          actions:
+          - action: JOSEPH_DRINK_ONE
+            title: 1 bottle
+          - action: JOSEPH_DRINK_TWO
+            title: 2 bottles
+          - action: JOSEPH_DRINK_NONE
+            title: None yet
+  - if:
+    - condition: and
+      conditions:
+      - condition: state
+        entity_id: input_boolean.joseph_pe_tomorrow
+        state: 'on'
+      - condition: state
+        entity_id: input_boolean.joseph_pe_kit_confirmed
+        state: 'off'
+    then:
+    - action: notify.joseph_notify
+      data:
+        title: PE kit. Again.
+        message: 'Joseph. PE tomorrow. Your kit. Still no confirmation. Is it ready or not. Yes or no. That''s it. '
+        data:
+          actions:
+          - action: JOSEPH_PE_DONE
+            title: Yes sorted
+          - action: JOSEPH_PE_NOT_YET
+            title: Not yet
+- id: joseph_drink_bottle_confirmed
+  alias: Joseph drink bottle confirmed
+  description: Marks drink bottle as confirmed when Joseph responds
+  mode: single
+  triggers:
+  - trigger: event
+    event_type: mobile_app_notification_action
+    event_data:
+      action: JOSEPH_DRINK_ONE
+  - trigger: event
+    event_type: mobile_app_notification_action
+    event_data:
+      action: JOSEPH_DRINK_TWO
+  actions:
+  - action: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.joseph_drink_confirmed
+  - action: notify.joseph_notify
+    data:
+      title: Logged
+      message: Drink bottle confirmed. Only took you a few reminders. Well done.
+- id: joseph_drink_none_yet
+  alias: Joseph drink bottle - none yet
+  description: Joseph tapped None yet - acknowledge and nudge via Alexa
+  mode: single
+  triggers:
+  - trigger: event
+    event_type: mobile_app_notification_action
+    event_data:
+      action: JOSEPH_DRINK_NONE
+  actions:
+  - action: notify.joseph_notify
+    data:
+      title: Right then.
+      message: Go put one in the fridge then. I'll ask again later.
+  - action: notify.alexa_media_boy_s_new_dot
+    data:
+      message: Joseph. Drink bottle. Fridge. Now please.
+      data:
+        type: tts
+        volume_level: 0.6
+- id: joseph_pe_done
+  alias: Joseph PE kit - confirmed
+  description: Marks PE kit as confirmed when Joseph responds
+  mode: single
+  triggers:
+  - trigger: event
+    event_type: mobile_app_notification_action
+    event_data:
+      action: JOSEPH_PE_DONE
+  actions:
+  - action: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.joseph_pe_kit_confirmed
+  - action: notify.joseph_notify
+    data:
+      title: Logged
+      message: PE kit confirmed. Nicely done.
+- id: joseph_pe_not_yet
+  alias: Joseph PE kit - not yet
+  description: Joseph tapped Not yet - acknowledge and nudge via Alexa
+  mode: single
+  triggers:
+  - trigger: event
+    event_type: mobile_app_notification_action
+    event_data:
+      action: JOSEPH_PE_NOT_YET
+  actions:
+  - action: notify.joseph_notify
+    data:
+      title: Sort it out.
+      message: Go get your PE kit ready then. I'll check again later.
+  - action: notify.alexa_media_boy_s_new_dot
+    data:
+      message: Joseph. PE kit. Go sort it out now please.
+      data:
+        type: tts
+        volume_level: 0.6
+- id: joseph_task_reset
+  alias: Joseph task reset
+  description: Resets all Joseph task booleans at midnight
+  mode: single
+  triggers:
+  - trigger: time
+    at: 00:01:00
+  actions:
+  - action: input_boolean.turn_off
+    target:
+      entity_id:
+      - input_boolean.joseph_drink_confirmed
+      - input_boolean.joseph_pe_kit_confirmed
+      - input_boolean.joseph_pe_tomorrow
 - id: '1772643456996'
   alias: Fridge Door
-  description: Flash light, wigwag bins/recycling and buzz when fridge opens. Announce
-    if open for 30s.
+  description: Flash light, wigwag bins/recycling and buzz when fridge opens. Announce if open for 30s.
   triggers:
   - type: opened
     device_id: 8a1d964ca02d98160fcc83f805e93259
@@ -874,6 +1127,16 @@
   - action: input_boolean.turn_on
     target:
       entity_id: input_boolean.alert_active
+  - action: rest_command.alarm_panel_alert
+    data:
+      level: yellow
+      source: FRIDGE DOOR
+      detail: OPEN
+  - action: rest_command.school_panel_alert
+    data:
+      level: yellow
+      source: FRIDGE DOOR
+      detail: OPEN
   - action: switch.turn_on
     target:
       entity_id: switch.mon_buzzer
@@ -924,6 +1187,16 @@
   - condition: state
     entity_id: binary_sensor.fridge_door
     state: 'on'
+  - action: rest_command.alarm_panel_alert
+    data:
+      level: red
+      source: FRIDGE DOOR
+      detail: OPEN
+  - action: rest_command.school_panel_alert
+    data:
+      level: red
+      source: FRIDGE DOOR
+      detail: OPEN
   - action: notify.alexa_media_kitchen_dot
     metadata: {}
     data:
@@ -937,9 +1210,7 @@
     trigger: state
   conditions:
   - condition: template
-    value_template: '{{ trigger.from_state is not none and trigger.to_state is not
-      none and trigger.from_state.state not in [''unavailable'', ''unknown''] and
-      trigger.to_state.state != ''unknown'' }}'
+    value_template: '{{ trigger.from_state is not none and trigger.to_state is not none and trigger.from_state.state not in [''unavailable'', ''unknown''] and trigger.to_state.state != ''unknown'' }}'
   actions:
   - choose:
     - conditions:
@@ -1260,7 +1531,7 @@
       entity_id: light.boys_info
 - id: kitchen_light_motion
   alias: Kitchen Light - Motion Auto On/Off
-  description: Turns kitchen lights on when motion detected, off after 2 mins no motion
+  description: Turns kitchen lights on when motion detected, off after 2 mins no motion (treats sensor unavailable as off so a hub dropout doesn't leave lights stuck on)
   mode: restart
   triggers:
   - trigger: state
@@ -1278,13 +1549,11 @@
   - action: switch.turn_on
     target:
       entity_id: switch.counter_light
-  - wait_template: '{{ is_state(''binary_sensor.kitchen_pir_sensor'', ''off'') and
-      is_state(''binary_sensor.kitchen_motion'', ''off'') }}'
+  - wait_template: '{{ not is_state(''binary_sensor.kitchen_pir_sensor'', ''on'') and not is_state(''binary_sensor.kitchen_motion'', ''on'') }}'
   - delay:
       minutes: 2
   - condition: template
-    value_template: '{{ is_state(''binary_sensor.kitchen_pir_sensor'', ''off'') and
-      is_state(''binary_sensor.kitchen_motion'', ''off'') }}'
+    value_template: '{{ not is_state(''binary_sensor.kitchen_pir_sensor'', ''on'') and not is_state(''binary_sensor.kitchen_motion'', ''on'') }}'
   - action: light.turn_off
     target:
       entity_id:
@@ -1353,8 +1622,7 @@
       - light.boys_led_light
 - id: boys_bedtime_reset
   alias: Boys Bedtime - Daily Reset
-  description: Clears bedtime after the room has been empty for 5 minutes, from 07:05
-    on school weekdays or 08:05 on weekends and holidays
+  description: Clears bedtime after the room has been empty for 5 minutes, from 07:05 on school weekdays or 08:05 on weekends and holidays
   mode: single
   triggers:
   - trigger: state
@@ -1376,9 +1644,7 @@
     for:
       minutes: 5
   - condition: template
-    value_template: "{% set school_weekday =\n  now().weekday() < 5 and is_state('input_boolean.school_day',
-      'on') %}\n{{ now() >= today_at('07:05') if school_weekday\n   else now() >=
-      today_at('08:05') }}"
+    value_template: "{% set school_weekday =\n  now().weekday() < 5 and is_state('input_boolean.school_day', 'on') %}\n{{ now() >= today_at('07:05') if school_weekday\n   else now() >= today_at('08:05') }}"
   actions:
   - action: input_boolean.turn_off
     target:
@@ -1394,19 +1660,14 @@
       - light.boys_led_light
 - id: boys_morning_sunrise
   alias: Boys Morning - Sunrise Light
-  description: Gradual red to white transition 15 mins before Boy's Dot alarm on school
-    days
+  description: Gradual red to white transition 15 mins before Boy's Dot alarm on school days
   mode: single
   triggers:
   - trigger: time_pattern
     minutes: /1
   conditions:
   - condition: template
-    value_template: "{% set alarm = states('sensor.boy_s_new_dot_next_alarm') %} {%
-      if alarm not in ['unknown', 'unavailable'] %}\n  {% set alarm_dt = alarm | as_datetime
-      | as_local %}\n  {% set sunrise_dt = alarm_dt - timedelta(minutes=15) %}\n  {{
-      now().strftime('%H:%M') == sunrise_dt.strftime('%H:%M') }}\n{% else %}\n  false\n{%
-      endif %}\n"
+    value_template: "{% set alarm = states('sensor.boy_s_new_dot_next_alarm') %} {% if alarm not in ['unknown', 'unavailable'] %}\n  {% set alarm_dt = alarm | as_datetime | as_local %}\n  {% set sunrise_dt = alarm_dt - timedelta(minutes=15) %}\n  {{ now().strftime('%H:%M') == sunrise_dt.strftime('%H:%M') }}\n{% else %}\n  false\n{% endif %}\n"
   - condition: time
     weekday:
     - mon
@@ -1431,17 +1692,13 @@
           - light.joseph_bedroom
         data:
           transition: 5
-          rgb_color: "{% set progress = repeat.index / 60 %} {% if progress < 0.5
-            %}\n  {% set t = progress * 2 %}\n  {{ [255, (200 * t) | int, 0] }}\n{%
-            else %}\n  {% set t = (progress - 0.5) * 2 %}\n  {{ [255, (200 + 55 *
-            t) | int, (100 * t) | int] }}\n{% endif %}\n"
+          rgb_color: "{% set progress = repeat.index / 60 %} {% if progress < 0.5 %}\n  {% set t = progress * 2 %}\n  {{ [255, (200 * t) | int, 0] }}\n{% else %}\n  {% set t = (progress - 0.5) * 2 %}\n  {{ [255, (200 + 55 * t) | int, (100 * t) | int] }}\n{% endif %}\n"
           brightness: '{{ (2.55 + (252.45 * (repeat.index / 60))) | int }} '
       - delay:
           seconds: 5
 - id: pir_hall_motion_on
   alias: PIR - Hall Motion Detected
-  description: Turns on hall light and landing switch on motion. Blue at bedtime,
-    white during day.
+  description: Turns on hall light and landing switch on motion. Blue at bedtime, white during day.
   triggers:
   - trigger: state
     entity_id: binary_sensor.hall_multi_sensor
@@ -1474,14 +1731,12 @@
     data: {}
     target:
       entity_id: switch.hall_wall
-  - wait_template: '{{ is_state(''binary_sensor.hall_multi_sensor'', ''off'') and
-      is_state(''binary_sensor.hall_pir'', ''off'') }}'
+  - wait_template: '{{ is_state(''binary_sensor.hall_multi_sensor'', ''off'') and is_state(''binary_sensor.hall_pir'', ''off'') }}'
     timeout:
       minutes: 15
     continue_on_timeout: true
   - delay:
-      seconds: '{{ 30 if is_state(''input_boolean.boys_bedtime'', ''on'') else 45
-        }}'
+      seconds: '{{ 30 if is_state(''input_boolean.boys_bedtime'', ''on'') else 45 }}'
   - action: light.turn_off
     target:
       entity_id: light.hall_light
@@ -1731,10 +1986,7 @@
         entity_id: light.fastled_ws2812b_light
 - id: school_day_manager
   alias: School Day Manager
-  description: 'At midnight: get today''s events from calendar.sandown_school_calendar.
-    Weekend, or any event containing ''holiday'', ''half term'', ''inset'', or ''bank
-    holiday'' -> school day OFF. Otherwise (no events or other special events) ->
-    school day ON. '
+  description: 'At midnight: get each boy''s own timetable events for today. Weekend, or an event containing holiday/half-term/inset/bank-holiday in HIS OWN calendar -> that boy''s school day OFF, otherwise ON. Each boy''s status is independent (fixed 2 Sep 2026 - previously combined, so one boy''s holiday event incorrectly cancelled the other boy''s school day too). input_boolean.school_day is kept as OR of the two, for shared/household automations (lights, joint announcements).'
   triggers:
   - trigger: time
     at: 00:01:00
@@ -1747,39 +1999,72 @@
   actions:
   - action: calendar.get_events
     target:
-      entity_id: calendar.sandown_school_calendar
+      entity_id: calendar.jacob_timetable
     data:
       start_date_time: '{{ now().strftime(''%Y-%m-%d'') }} 00:00:00'
       end_date_time: '{{ now().strftime(''%Y-%m-%d'') }} 23:59:59'
-    response_variable: todays_events
+    response_variable: jacob_events
+  - action: calendar.get_events
+    target:
+      entity_id: calendar.joseph_timetable
+    data:
+      start_date_time: '{{ now().strftime(''%Y-%m-%d'') }} 00:00:00'
+      end_date_time: '{{ now().strftime(''%Y-%m-%d'') }} 23:59:59'
+    response_variable: joseph_events
   - if:
     - condition: template
-      value_template: "{{ now().weekday() >= 5 or\n   todays_events['calendar.sandown_school_calendar']['events']
-        |\n   selectattr('summary', 'search', 'holiday|half\\s*-?\\s*term|inset|bank\\s*holiday',
-        ignorecase=True) |\n   list | count > 0 }}\n"
+      value_template: "{{ now().weekday() >= 5 or\n   jacob_events['calendar.jacob_timetable']['events'] |\n   selectattr('summary', 'search', 'holiday|half\\s*-?\\s*term|inset|bank\\s*holiday', ignorecase=True) |\n   list | count > 0 }}\n"
     then:
     - action: input_boolean.turn_off
       target:
-        entity_id: input_boolean.school_day
-    - action: input_text.set_value
-      target:
-        entity_id: input_text.boys_school
-      data:
-        value: "{%- set off_event = todays_events['calendar.sandown_school_calendar']['events']
-          |\n   selectattr('summary', 'search', 'holiday|half\\s*-?\\s*term|inset|bank\\s*holiday',
-          ignorecase=True) |\n   map(attribute='summary') | first | default('') -%}\n{%
-          if off_event %}{{ off_event }}{% else %}Enjoy your day off{% endif %}\n"
+        entity_id: input_boolean.jacob_school_day
     else:
     - action: input_boolean.turn_on
       target:
+        entity_id: input_boolean.jacob_school_day
+  - if:
+    - condition: template
+      value_template: "{{ now().weekday() >= 5 or\n   joseph_events['calendar.joseph_timetable']['events'] |\n   selectattr('summary', 'search', 'holiday|half\\s*-?\\s*term|inset|bank\\s*holiday', ignorecase=True) |\n   list | count > 0 }}\n"
+    then:
+    - action: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.joseph_school_day
+    else:
+    - action: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.joseph_school_day
+  - if:
+    - condition: or
+      conditions:
+      - condition: state
+        entity_id: input_boolean.jacob_school_day
+        state: 'on'
+      - condition: state
+        entity_id: input_boolean.joseph_school_day
+        state: 'on'
+    then:
+    - action: input_boolean.turn_on
+      target:
         entity_id: input_boolean.school_day
+    else:
+    - action: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.school_day
+  - if:
+    - condition: template
+      value_template: "{{ now().weekday() >= 5 or\n   (jacob_events['calendar.jacob_timetable']['events'] + joseph_events['calendar.joseph_timetable']['events']) |\n   selectattr('summary', 'search', 'holiday|half\\s*-?\\s*term|inset|bank\\s*holiday', ignorecase=True) |\n   list | count > 0 }}\n"
+    then:
     - action: input_text.set_value
       target:
         entity_id: input_text.boys_school
       data:
-        value: "{%- set events = todays_events['calendar.sandown_school_calendar']['events']
-          |\n   map(attribute='summary') | list -%}\n{% if events %}{{ events | join(',
-          ') }}{% else %}School day{% endif %}\n"
+        value: "{%- set off_event = (jacob_events['calendar.jacob_timetable']['events'] + joseph_events['calendar.joseph_timetable']['events']) |\n   selectattr('summary', 'search', 'holiday|half\\s*-?\\s*term|inset|bank\\s*holiday', ignorecase=True) |\n   map(attribute='summary') | first | default('') -%}\n{% if off_event %}{{ off_event }}{% else %}Enjoy your day off{% endif %}\n"
+    else:
+    - action: input_text.set_value
+      target:
+        entity_id: input_text.boys_school
+      data:
+        value: "{%- set events = (jacob_events['calendar.jacob_timetable']['events'] + joseph_events['calendar.joseph_timetable']['events']) |\n   map(attribute='summary') | list -%}\n{% if events %}{{ events | join(', ') }}{% else %}School day{% endif %}\n"
   mode: single
 - id: boys_timetable_text
   alias: Boys Timetable Text
@@ -1807,7 +2092,7 @@
     response_variable: jacob_tomorrow
   - if:
     - condition: template
-      value_template: "{{ states('calendar.joseph_timetable') not in ['unknown', 'unavailable'] }}"
+      value_template: '{{ states(''calendar.joseph_timetable'') not in [''unknown'', ''unavailable''] }}'
     then:
     - action: calendar.get_events
       target:
@@ -1827,20 +2112,16 @@
       target:
         entity_id: input_text.joseph_timetable_today
       data:
-        value: '{%- set events = joseph_today[''calendar.joseph_timetable''][''events'']
-          | map(attribute=''summary'') | list -%}
+        value: '{%- set events = joseph_today[''calendar.joseph_timetable''][''events''] | map(attribute=''summary'') | list -%}
 
-          {%- if events -%}{{ events | join('', '') | truncate(255, true, '''') }}{%-
-          else -%}No lessons today{%- endif -%}'
+          {%- if events -%}{{ events | join('', '') | truncate(255, true, '''') }}{%- else -%}No lessons today{%- endif -%}'
     - action: input_text.set_value
       target:
         entity_id: input_text.joseph_timetable_tomorrow
       data:
-        value: '{%- set events = joseph_tomorrow[''calendar.joseph_timetable''][''events'']
-          | map(attribute=''summary'') | list -%}
+        value: '{%- set events = joseph_tomorrow[''calendar.joseph_timetable''][''events''] | map(attribute=''summary'') | list -%}
 
-          {%- if events -%}{{ events | join('', '') | truncate(255, true, '''') }}{%-
-          else -%}No lessons tomorrow{%- endif -%}'
+          {%- if events -%}{{ events | join('', '') | truncate(255, true, '''') }}{%- else -%}No lessons tomorrow{%- endif -%}'
     else:
     - action: input_text.set_value
       target:
@@ -1856,24 +2137,19 @@
     target:
       entity_id: input_text.jacob_timetable_today
     data:
-      value: '{%- set events = jacob_today[''calendar.jacob_timetable''][''events'']
-        | map(attribute=''summary'') | list -%}
+      value: '{%- set events = jacob_today[''calendar.jacob_timetable''][''events''] | map(attribute=''summary'') | list -%}
 
-        {%- if events -%}{{ events | join('', '') | truncate(255, true, '''') }}{%-
-        else -%}No lessons today{%- endif -%}'
+        {%- if events -%}{{ events | join('', '') | truncate(255, true, '''') }}{%- else -%}No lessons today{%- endif -%}'
   - action: input_text.set_value
     target:
       entity_id: input_text.jacob_timetable_tomorrow
     data:
-      value: '{%- set events = jacob_tomorrow[''calendar.jacob_timetable''][''events'']
-        | map(attribute=''summary'') | list -%}
+      value: '{%- set events = jacob_tomorrow[''calendar.jacob_timetable''][''events''] | map(attribute=''summary'') | list -%}
 
-        {%- if events -%}{{ events | join('', '') | truncate(255, true, '''') }}{%-
-        else -%}No lessons tomorrow{%- endif -%}'
+        {%- if events -%}{{ events | join('', '') | truncate(255, true, '''') }}{%- else -%}No lessons tomorrow{%- endif -%}'
 - id: valance_morning_sunrise
   alias: Valance Morning Sunrise
-  description: 'Triggers WLED nightlight sunrise on valance at 06:15 Mon-Fri. 10 minute
-    fade from off to full brightness. No school_day gate (Natalie''s wake-up). '
+  description: 'Triggers WLED nightlight sunrise on valance at 06:15 Mon-Fri. 10 minute fade from off to full brightness. No school_day gate (Natalie''s wake-up). '
   mode: single
   triggers:
   - trigger: time
@@ -1898,8 +2174,7 @@
     event_type: esphome.encoder_event
   conditions:
   - condition: template
-    value_template: '{{ trigger.event.data.action in [''left'', ''right'', ''press'',
-      ''long_press''] }}'
+    value_template: '{{ trigger.event.data.action in [''left'', ''right'', ''press'', ''long_press''] }}'
   actions:
   - choose:
     - conditions:
@@ -1915,14 +2190,12 @@
           - action: script.rotary_ui_menu_previous
         - conditions:
           - condition: template
-            value_template: '{{ states(''input_select.rotary_ui_state'') in [''page_school'',
-              ''page_jacob''] }}'
+            value_template: '{{ states(''input_select.rotary_ui_state'') in [''page_school'', ''page_jacob''] }}'
           sequence:
           - action: script.rotary_ui_page_previous
         default:
         - condition: template
-          value_template: '{{ not is_state(''input_select.rotary_ui_state'', ''front'')
-            }}'
+          value_template: '{{ not is_state(''input_select.rotary_ui_state'', ''front'') }}'
         - action: script.rotary_ui_touch
     - conditions:
       - condition: template
@@ -1937,14 +2210,12 @@
           - action: script.rotary_ui_menu_next
         - conditions:
           - condition: template
-            value_template: '{{ states(''input_select.rotary_ui_state'') in [''page_school'',
-              ''page_jacob''] }}'
+            value_template: '{{ states(''input_select.rotary_ui_state'') in [''page_school'', ''page_jacob''] }}'
           sequence:
           - action: script.rotary_ui_page_next
         default:
         - condition: template
-          value_template: '{{ not is_state(''input_select.rotary_ui_state'', ''front'')
-            }}'
+          value_template: '{{ not is_state(''input_select.rotary_ui_state'', ''front'') }}'
         - action: script.rotary_ui_touch
     - conditions:
       - condition: template
@@ -1993,9 +2264,7 @@
     to: 'off'
   conditions:
   - condition: template
-    value_template: '{{ trigger.from_state is not none and trigger.to_state is not
-      none and trigger.from_state.state == ''on'' and trigger.to_state.state == ''off''
-      }}'
+    value_template: '{{ trigger.from_state is not none and trigger.to_state is not none and trigger.from_state.state == ''on'' and trigger.to_state.state == ''off'' }}'
   - condition: state
     entity_id: binary_sensor.octoprint_printing_error
     state: 'off'
@@ -2020,9 +2289,7 @@
     to: 'on'
   conditions:
   - condition: template
-    value_template: '{{ trigger.from_state is not none and trigger.to_state is not
-      none and trigger.from_state.state == ''off'' and trigger.to_state.state == ''on''
-      }}'
+    value_template: '{{ trigger.from_state is not none and trigger.to_state is not none and trigger.from_state.state == ''off'' and trigger.to_state.state == ''on'' }}'
   - condition: time
     after: 07:00:00
     before: '20:00:00'
@@ -2035,8 +2302,7 @@
         method: speak
 - id: kit_check_parent_confirm
   alias: Kit Check — Parent confirms, unblock YouTube
-  description: Fired when Jon or Natalie taps the kit confirmed action on their phone
-    notification
+  description: Fired when Jon or Natalie taps the kit confirmed action on their phone notification
   triggers:
   - trigger: event
     event_type: mobile_app_notification_action
@@ -2074,9 +2340,7 @@
   mode: single
 - id: adguard_per_user_filtering
   alias: AdGuard — Per-User Filtering (JonPC Console)
-  description: 'Watches sensor.jon_pc_console_active_console_user and applies the
-    appropriate AdGuard filtering policy to the Kids-VLAN based on who is logged into
-    JonPC. jon_m=unfiltered, natal=default, all others=boys.
+  description: 'Watches sensor.jon_pc_console_active_console_user and applies the appropriate AdGuard filtering policy to the Kids-VLAN based on who is logged into JonPC. jon_m=unfiltered, natal=default, all others=boys.
 
     '
   triggers:
@@ -2093,7 +2357,7 @@
       - action: shell_command.adguard_set_unfiltered_policy
       - action: notify.jon_notify
         data:
-          message: "\U0001F513 JonPC: Jon logged in — AdGuard Kids-VLAN unfiltered"
+          message: '🔓 JonPC: Jon logged in — AdGuard Kids-VLAN unfiltered'
     - conditions:
       - condition: state
         entity_id: sensor.jon_pc_console_active_console_user
@@ -2102,8 +2366,7 @@
       - action: shell_command.adguard_set_default_policy
       - action: notify.jon_notify
         data:
-          message: "\U0001F512 JonPC: Natalie logged in — AdGuard Kids-VLAN default
-            policy"
+          message: '🔒 JonPC: Natalie logged in — AdGuard Kids-VLAN default policy'
     - conditions:
       - condition: state
         entity_id: sensor.jon_pc_console_active_console_user
@@ -2112,7 +2375,7 @@
       - action: shell_command.adguard_set_boys_policy
       - action: notify.jon_notify
         data:
-          message: "\U0001F466 JonPC: Joseph logged in — AdGuard Kids-VLAN boys policy"
+          message: '👦 JonPC: Joseph logged in — AdGuard Kids-VLAN boys policy'
     - conditions:
       - condition: state
         entity_id: sensor.jon_pc_console_active_console_user
@@ -2121,53 +2384,47 @@
       - action: shell_command.adguard_set_boys_policy
       - action: notify.jon_notify
         data:
-          message: "\U0001F466 JonPC: Jacob logged in — AdGuard Kids-VLAN boys policy"
+          message: '👦 JonPC: Jacob logged in — AdGuard Kids-VLAN boys policy'
     default:
     - action: shell_command.adguard_set_boys_policy
     - action: notify.jon_notify
       data:
-        message: "\U0001F512 JonPC: {{ states('sensor.jon_pc_console_active_console_user')
-          | default('unknown') }} logged in — AdGuard Kids-VLAN boys policy (fail-safe)\n"
+        message: '🔒 JonPC: {{ states(''sensor.jon_pc_console_active_console_user'') | default(''unknown'') }} logged in — AdGuard Kids-VLAN boys policy (fail-safe)
+
+          '
   mode: single
   max_exceeded: silent
 - id: boys_phones_charging_2210
   alias: Check Boys Phones Charging 22:10
-  description: Alexa announcement if Jacob's or Joseph's phone isn't charging at 22:10,
-    skipping anyone not home (sleepovers etc)
+  description: Alexa announcement if Jacob's or Joseph's phone isn't charging at 22:10, skipping anyone not home (sleepovers etc)
   triggers:
   - trigger: time
     at: '22:10:00'
   conditions: []
   actions:
   - variables:
-      jacob_ok: '{{ not is_state(''person.jacob'',''home'') or states(''sensor.jacob_phone_battery_state'')
-        in [''charging'', ''full''] }}'
-      joseph_ok: '{{ not is_state(''person.joseph'',''home'') or states(''sensor.joseph_phone_battery_state'')
-        in [''charging'', ''full''] }}'
+      jacob_ok: '{{ not is_state(''person.jacob'',''home'') or states(''sensor.jacob_phone_battery_state'') in [''charging'', ''full''] }}'
+      joseph_ok: '{{ not is_state(''person.joseph'',''home'') or states(''sensor.joseph_phone_battery_state'') in [''charging'', ''full''] }}'
   - if:
     - condition: template
       value_template: '{{ not jacob_ok or not joseph_ok }}'
     then:
     - variables:
-        names_not_charging: '{{ ([''Jacob''] if not jacob_ok else []) + ([''Joseph'']
-          if not joseph_ok else []) }}'
+        names_not_charging: '{{ ([''Jacob''] if not jacob_ok else []) + ([''Joseph''] if not joseph_ok else []) }}'
     - data:
-        message: '{{ names_not_charging | join('' and '') }}{{ '' is'' if names_not_charging
-          | length == 1 else '' are'' }} phone not charging.'
+        message: '{{ names_not_charging | join('' and '') }}{{ '' is'' if names_not_charging | length == 1 else '' are'' }} phone not charging.'
         data:
           type: announce
       action: notify.alexa_media_bedroom_dot
     - data:
-        message: '{{ names_not_charging | join('' and '') }}{{ '' is'' if names_not_charging
-          | length == 1 else '' are'' }} phone not charging.'
+        message: '{{ names_not_charging | join('' and '') }}{{ '' is'' if names_not_charging | length == 1 else '' are'' }} phone not charging.'
         data:
           type: announce
       action: notify.alexa_media_lounge_plus
   mode: single
 - id: adults_phone_charging_sleep_check
   alias: Check Jon/Natalie Phone Charging on Sleep Detection
-  description: When sleep confidence stays above 75% for 20 minutes, check if that
-    person's phone is charging. Skips anyone not home.
+  description: When sleep confidence stays above 75% for 20 minutes, check if that person's phone is charging. Skips anyone not home.
   triggers:
   - trigger: numeric_state
     entity_id: sensor.jon_phone_sleep_confidence
@@ -2237,40 +2494,32 @@
   mode: parallel
 - id: adults_phone_charging_fallback_2330
   alias: Check Jon/Natalie Phone Charging 23:30 Fallback
-  description: 'Safety net: at 23:30, checks Jon and Natalie''s phones regardless
-    of sleep detection, in case the sleep-confidence trigger missed. Skips anyone
-    not home.'
+  description: 'Safety net: at 23:30, checks Jon and Natalie''s phones regardless of sleep detection, in case the sleep-confidence trigger missed. Skips anyone not home.'
   triggers:
   - trigger: time
     at: '23:30:00'
   conditions: []
   actions:
   - variables:
-      jon_ok: '{{ not is_state(''person.jon'',''home'') or states(''sensor.jon_phone_battery_state'')
-        in [''charging'', ''full''] }}'
-      natalie_ok: '{{ not is_state(''person.natalie'',''home'') or states(''sensor.sm_a566b_battery_state'')
-        in [''charging'', ''full''] }}'
+      jon_ok: '{{ not is_state(''person.jon'',''home'') or states(''sensor.jon_phone_battery_state'') in [''charging'', ''full''] }}'
+      natalie_ok: '{{ not is_state(''person.natalie'',''home'') or states(''sensor.sm_a566b_battery_state'') in [''charging'', ''full''] }}'
   - if:
     - condition: template
       value_template: '{{ not jon_ok or not natalie_ok }}'
     then:
     - variables:
-        names_not_charging: '{{ ([''Jon''] if not jon_ok else []) + ([''Natalie'']
-          if not natalie_ok else []) }}'
+        names_not_charging: '{{ ([''Jon''] if not jon_ok else []) + ([''Natalie''] if not natalie_ok else []) }}'
     - action: notify.alexa_media_bedroom_dot
       data:
-        message: '{{ names_not_charging | join('' and '') }}{{ '' is'' if names_not_charging
-          | length == 1 else '' are'' }} phone not charging.'
+        message: '{{ names_not_charging | join('' and '') }}{{ '' is'' if names_not_charging | length == 1 else '' are'' }} phone not charging.'
         data:
           type: announce
     - action: notify.alexa_media_lounge_plus
       data:
-        message: '{{ names_not_charging | join('' and '') }}{{ '' is'' if names_not_charging
-          | length == 1 else '' are'' }} phone not charging.'
+        message: '{{ names_not_charging | join('' and '') }}{{ '' is'' if names_not_charging | length == 1 else '' are'' }} phone not charging.'
         data:
           type: announce
   mode: single
-
 - id: alarm_panel_refresh_on_state_change
   alias: Alarm Panel - Refresh Screen on State Change
   description: Pushes an immediate refresh to the Alarm Panel V2 screen board when Alarmo or sidebar toggle state changes, instead of waiting for its fallback poll
@@ -2285,7 +2534,6 @@
   actions:
   - action: rest_command.alarm_panel_refresh
     data: {}
-
 - id: alarm_panel_wake_on_landing_pir
   alias: Alarm Panel - Wake on Landing Motion
   description: Turns the Alarm Panel V2 screen backlight on when either landing PIR detects motion
@@ -2300,7 +2548,6 @@
   actions:
   - action: rest_command.alarm_panel_wake
     data: {}
-
 - id: school_panel_refresh_on_state_change
   alias: School Panel - Refresh Screen on State Change
   description: Pushes an immediate refresh to the school calendar screen when displayed HA state changes, instead of waiting for its fallback poll
@@ -2319,23 +2566,250 @@
     - sensor.school_event_today
     - sensor.school_event_tomorrow
     - calendar.boys_school
-    - calendar.sandown_school_calendar
+    - calendar.jacob_timetable
+    - calendar.joseph_timetable
   conditions: []
   actions:
   - action: rest_command.school_panel_refresh
     data: {}
-
 - id: school_panel_wake_on_landing_pir
-  alias: School Panel - Wake on Kitchen Motion
-  description: Turns the school calendar screen backlight on when either kitchen/downstairs PIR detects motion
+  alias: Home Info - Wake on Dining Room Motion
+  description: Turns the home info screen backlight on when the lounge multi sensor or dining room PIR detects motion
   mode: restart
   triggers:
   - trigger: state
     entity_id:
-    - binary_sensor.kitchen_pir_sensor
-    - binary_sensor.kitchen_motion
+    - binary_sensor.lounge_multi_sensor
+    - binary_sensor.dining_room_pir_sensor
     to: 'on'
   conditions: []
   actions:
   - action: rest_command.school_panel_wake
     data: {}
+- id: '1786382296000'
+  alias: Front Door
+  description: Strobe flash bins/recycling (3 flashes each side, 0.5s per side) and buzz when front door opens. Announce on lounge + bedroom Alexas if still open after the strobe sequence.
+  triggers:
+  - type: opened
+    device_id: 3261477c3a8e34b6126520c831c795d6
+    entity_id: binary_sensor.front_door_2
+    domain: binary_sensor
+    trigger: device
+  conditions: []
+  actions:
+  - action: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.alert_active
+  - action: rest_command.alarm_panel_alert
+    data:
+      level: yellow
+      source: FRONT DOOR
+      detail: OPEN
+  - action: rest_command.school_panel_alert
+    data:
+      level: yellow
+      source: FRONT DOOR
+      detail: OPEN
+  - action: switch.turn_on
+    target:
+      entity_id: switch.mon_buzzer
+  - delay:
+      milliseconds: 500
+  - action: switch.turn_off
+    target:
+      entity_id: switch.mon_buzzer
+  - alias: Strobe wigwag while door is open
+    repeat:
+      while:
+      - condition: state
+        entity_id: binary_sensor.front_door_2
+        state: 'on'
+      - condition: template
+        value_template: '{{ repeat.index <= 15 }}'
+      sequence:
+      - alias: 3 bins flashes totalling 0.5s
+        repeat:
+          count: 3
+          sequence:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.bins
+          - delay:
+              milliseconds: 83
+          - action: switch.turn_off
+            target:
+              entity_id: switch.bins
+          - delay:
+              milliseconds: 84
+      - alias: 3 recycling flashes totalling 0.5s
+        repeat:
+          count: 3
+          sequence:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.recycling
+          - delay:
+              milliseconds: 83
+          - action: switch.turn_off
+            target:
+              entity_id: switch.recycling
+          - delay:
+              milliseconds: 84
+  - action: switch.turn_off
+    target:
+      entity_id:
+      - switch.bins
+      - switch.recycling
+  - condition: state
+    entity_id: binary_sensor.front_door_2
+    state: 'on'
+  - action: rest_command.alarm_panel_alert
+    data:
+      level: red
+      source: FRONT DOOR
+      detail: OPEN
+  - action: rest_command.school_panel_alert
+    data:
+      level: red
+      source: FRONT DOOR
+      detail: OPEN
+  - action: notify.alexa_media_lounge_plus
+    data:
+      message: The Front door is open
+  - action: notify.alexa_media_bedroom_dot
+    data:
+      message: The Front door is open
+  mode: restart
+- id: panel_alert_clear_doors_closed
+  alias: Panel Alert Clear - Doors Closed
+  description: Clear yellow/red panel door alerts as soon as the monitored doors are closed.
+  triggers:
+  - entity_id:
+    - binary_sensor.fridge_door
+    - binary_sensor.front_door_2
+    from: 'on'
+    to: 'off'
+    trigger: state
+  conditions:
+  - condition: state
+    entity_id: binary_sensor.fridge_door
+    state: 'off'
+  - condition: state
+    entity_id: binary_sensor.front_door_2
+    state: 'off'
+  actions:
+  - action: rest_command.alarm_panel_alert_clear
+  - action: rest_command.school_panel_alert_clear
+  - action: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.alert_active
+  - action: switch.turn_off
+    target:
+      entity_id:
+      - switch.bins
+      - switch.recycling
+      - switch.mon_buzzer
+  - action: light.turn_off
+    target:
+      entity_id: light.boys_info
+  mode: restart
+- id: kitchen_hub_offline_alert
+  alias: Kitchen Sensor Hub - Offline Alert
+  description: Notifies Jon when the kitchen sensor hub (ESPHome device) drops offline for more than 2 minutes
+  mode: single
+  triggers:
+  - trigger: state
+    entity_id: sensor.kitchen_wifi_signal
+    to: unavailable
+    for:
+      minutes: 2
+  conditions: []
+  actions:
+  - action: notify.jon_notify
+    data:
+      title: Kitchen sensor hub offline
+      message: The kitchen sensor hub has been offline for 2+ minutes. PIR/mmWave motion detection and the kitchen light auto-off will not work until it reconnects.
+- id: waste_missed_collection_alert
+  alias: Waste Missed Collection Alert
+  description: Alerts if a scheduled bin collection was not actually completed, using live Dover DDC data
+  triggers:
+  - trigger: state
+    entity_id: sensor.waste_missed_collections
+  conditions:
+  - condition: template
+    value_template: '{{ trigger.to_state.state not in [''No issues'', ''unknown'', ''unavailable''] }}'
+  actions:
+  - action: notify.mobile_app_jon_phone
+    data:
+      title: ⚠️ Bin Collection Missed
+      message: '{{ trigger.to_state.state }} not collected. You can report a missed collection within 1 working day via the Dover DDC portal.'
+  mode: single
+- id: printer_paper_safe_sync_cups
+  alias: Printer Paper Safe - Sync CUPS Queue
+  description: Pauses/resumes the CanonTR4650 CUPS queue on the print-server Pi to match the paper-safety toggle. Jobs sent while paused are held by CUPS and print automatically once resumed.
+  mode: single
+  triggers:
+  - trigger: state
+    entity_id: input_boolean.printer_paper_safe
+  conditions: []
+  actions:
+  - choose:
+    - conditions:
+      - condition: state
+        entity_id: input_boolean.printer_paper_safe
+        state: "on"
+      sequence:
+      - action: shell_command.printer_cups_enable
+    - conditions:
+      - condition: state
+        entity_id: input_boolean.printer_paper_safe
+        state: "off"
+      sequence:
+      - action: shell_command.printer_cups_disable
+
+- id: printer_paper_safe_nudge
+  alias: Printer Paper Safe - Left Off Nudge
+  description: Notifies Jon if the paper-safety toggle has been left off (stickers loaded, print jobs held) for more than a day.
+  mode: single
+  triggers:
+  - trigger: state
+    entity_id: input_boolean.printer_paper_safe
+    to: "off"
+    for:
+      hours: 24
+  conditions: []
+  actions:
+  - action: notify.jon_notify
+    data:
+      title: Printer still paused
+      message: The CBJ/Goodwin print queue has been held for over 24 hours because "Printer Paper Safe" is still off. Swap the paper back and flip the toggle if you're done with stickers.
+- id: cbj_print_job_webhook
+  alias: CBJ Print Job Webhook
+  description: >-
+    Receives a print request (from n8n, e.g. Goodwin email auto-print or
+    CBJ dispatch notes) and dispatches it to the CanonTR4650 queue via
+    CUPS. POST JSON body: {"type": "text"|"file", "content_b64": "...",
+    "ext": "pdf"} — ext only used when type is "file", defaults to pdf.
+  mode: queued
+  max: 10
+  triggers:
+  - trigger: webhook
+    webhook_id: cbj_print_job_8f2e91d4a7
+    allowed_methods:
+    - POST
+    local_only: false
+  conditions: []
+  actions:
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: "{{ trigger.json.type == 'file' }}"
+      sequence:
+      - action: shell_command.printer_print_file
+        data:
+          content_b64: "{{ trigger.json.content_b64 }}"
+          ext: "{{ trigger.json.ext | default('pdf') }}"
+    default:
+    - action: shell_command.printer_print_text
+      data:
+        content_b64: "{{ trigger.json.content_b64 }}"
