@@ -484,9 +484,9 @@
     data:
       message: '{{ kids_weather_message }}'
   mode: single
-- id: jacob_school_evening_prep
-  alias: Jacob school evening prep
-  description: Evening school prep with AI announcement, PE detection, YouTube block, and actionable notifications
+- id: family_school_evening_prep
+  alias: Family school evening prep
+  description: Evening school prep with AI announcement, PE detection, YouTube block, and actionable notifications for whichever boy(s) have school tomorrow (merged 14 Sep 2026 from separate Jacob/Joseph automations, which both fired at 19:00 and duplicated everything now both boys are at Goodwin)
   triggers:
   - trigger: time
     at: '19:00:00'
@@ -508,46 +508,76 @@
       start_date_time: '{{ (now().date() + timedelta(days=1)).strftime(''%Y-%m-%d'') }} 00:00:00'
       end_date_time: '{{ (now().date() + timedelta(days=1)).strftime(''%Y-%m-%d'') }} 23:59:59'
     response_variable: tomorrow_school_events
+  - variables:
+      jacob_has_school: '{{ (now().date() + timedelta(days=1)).weekday() < 5 and (tomorrow_school_events[''calendar.jacob_timetable''][''events'']) | selectattr(''summary'', ''search'', ''holiday|half\s*-?\s*term|inset|bank'', ignorecase=True) | list | count == 0 }}'
+      joseph_has_school: '{{ (now().date() + timedelta(days=1)).weekday() < 5 and (tomorrow_school_events[''calendar.joseph_timetable''][''events'']) | selectattr(''summary'', ''search'', ''holiday|half\s*-?\s*term|inset|bank'', ignorecase=True) | list | count == 0 }}'
   - if:
     - condition: template
-      value_template: '{{ (now().date() + timedelta(days=1)).weekday() >= 5 or (tomorrow_school_events[''calendar.jacob_timetable''][''events'']) | selectattr(''summary'', ''search'', ''holiday|half\s*-?\s*term|inset|bank'', ignorecase=True) | list | count > 0 }}'
+      value_template: '{{ not jacob_has_school and not joseph_has_school }}'
     then:
-    - stop: Tomorrow is not a school day
+    - stop: Tomorrow is not a school day for either boy
+  - if:
+    - condition: template
+      value_template: '{{ jacob_has_school }}'
+    then:
+    - action: input_boolean.turn_off
+      target:
+        entity_id:
+        - input_boolean.jacob_drink_confirmed
+        - input_boolean.jacob_pe_kit_confirmed
+        - input_boolean.jacob_pe_tomorrow
+  - if:
+    - condition: template
+      value_template: '{{ joseph_has_school }}'
+    then:
+    - action: input_boolean.turn_off
+      target:
+        entity_id:
+        - input_boolean.joseph_drink_confirmed
+        - input_boolean.joseph_pe_kit_confirmed
+        - input_boolean.joseph_pe_tomorrow
   - action: input_boolean.turn_off
     target:
-      entity_id:
-      - input_boolean.jacob_drink_confirmed
-      - input_boolean.jacob_pe_kit_confirmed
-      - input_boolean.jacob_pe_tomorrow
-      - input_boolean.kit_check_active
+      entity_id: input_boolean.kit_check_active
   - action: calendar.get_events
     target:
       entity_id:
       - calendar.boys_school
       - calendar.jacob_timetable
+      - calendar.joseph_timetable
     data:
       start_date_time: '{{ (now().date() + timedelta(days=1)).strftime(''%Y-%m-%d'') }} 00:00:00'
       end_date_time: '{{ (now().date() + timedelta(days=1)).strftime(''%Y-%m-%d'') }} 23:59:59'
     response_variable: school_events
   - if:
     - condition: template
-      value_template: '{{ (school_events[''calendar.boys_school''][''events''] + school_events[''calendar.jacob_timetable''][''events'']) | selectattr(''summary'', ''search'', ''PE'', ignorecase=True) | list | count > 0 }}'
+      value_template: '{{ jacob_has_school and (school_events[''calendar.boys_school''][''events''] + school_events[''calendar.jacob_timetable''][''events'']) | selectattr(''summary'', ''search'', ''PE'', ignorecase=True) | list | count > 0 }}'
     then:
     - action: input_boolean.turn_on
       target:
         entity_id: input_boolean.jacob_pe_tomorrow
+  - if:
+    - condition: template
+      value_template: '{{ joseph_has_school and (school_events[''calendar.boys_school''][''events''] + school_events[''calendar.joseph_timetable''][''events'']) | selectattr(''summary'', ''search'', ''PE'', ignorecase=True) | list | count > 0 }}'
+    then:
+    - action: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.joseph_pe_tomorrow
   - variables:
-      # sandown_event_text removed 2 Sep 2026: Sandown's calendar was unsubscribed
-      # Aug 2026 (school moved to Goodwin). No Goodwin whole-school-event
-      # calendar/newsletter feed exists to replace it -- that information
-      # currently only arrives via Goodwin's emails, not any calendar. Real
-      # event detection here is blocked on that email-handling project
-      # (parked separately, 2 Sep 2026).
-      jacob_school_event_text: '{% set evts = school_events[''calendar.boys_school''][''events''] %} {{ evts | map(attribute=''summary'') | join(''; '') }}'
+      shared_school_event_text: '{% set evts = school_events[''calendar.boys_school''][''events''] %} {{ evts | map(attribute=''summary'') | join(''; '') }}'
   - action: conversation.process
     data:
       agent_id: conversation.evening_prep
-      text: 'Write a short evening school prep announcement for both boys. School is tomorrow. They need bags packed, homework done. Jacob needs a drink bottle in the fridge. {% if is_state(''input_boolean.jacob_pe_tomorrow'', ''on'') %} Jacob also has PE tomorrow and needs his PE kit ready. {% endif %} {% if jacob_school_event_text | trim != '''' %} Jacob also has: {{ jacob_school_event_text }}. {% endif %} At the end, add one short sentence warning that a YouTube block is coming soon for anyone who doesn''t confirm their kit is sorted. Style: chaotic dad humour, dry sarcasm, short punchy sentences. No emojis. No baby talk. Address both boys directly.'
+      text: >-
+        Write a short evening school prep announcement.
+        {% if jacob_has_school and joseph_has_school %}School is tomorrow for both Jacob and Joseph. They need bags packed, homework done. Jacob needs a drink bottle in the fridge.
+        {% elif jacob_has_school %}School is tomorrow for Jacob only (Joseph is off). Jacob needs his bag packed, homework done, and a drink bottle in the fridge.
+        {% elif joseph_has_school %}School is tomorrow for Joseph only (Jacob is off). Joseph needs his bag packed, homework done, and a drink bottle in the fridge.
+        {% endif %}
+        {% if is_state('input_boolean.jacob_pe_tomorrow', 'on') %} Jacob also has PE tomorrow and needs his PE kit ready.{% endif %}
+        {% if is_state('input_boolean.joseph_pe_tomorrow', 'on') %} Joseph also has PE tomorrow and needs his PE kit ready.{% endif %}
+        {% if shared_school_event_text | trim != '' %} Also: {{ shared_school_event_text }}.{% endif %}
+        At the end, add one short sentence warning that a YouTube block is coming soon for anyone who doesn't confirm their kit is sorted. Style: chaotic dad humour, dry sarcasm, short punchy sentences. No emojis. No baby talk. Address whichever boy(s) have school directly by name.
     response_variable: agent_response
   - if:
     - condition: template
@@ -557,10 +587,18 @@
     - action: conversation.process
       data:
         agent_id: conversation.evening_prep
-        text: 'Try again. Write a short evening school prep announcement for both boys. School is tomorrow. Bags packed, homework done, Jacob drink bottle in the fridge. {% if is_state(''input_boolean.jacob_pe_tomorrow'', ''on'') %} Jacob has PE tomorrow and needs his kit ready. {% endif %} End with a warning that a YouTube block is coming soon for anyone not sorted. Style: chaotic dad humour, dry sarcasm, short punchy sentences. No emojis.'
+        text: >-
+          Try again. Write a short evening school prep announcement.
+          {% if jacob_has_school and joseph_has_school %}School is tomorrow for both Jacob and Joseph. Bags packed, homework done, Jacob drink bottle in the fridge.
+          {% elif jacob_has_school %}School is tomorrow for Jacob only. Jacob's bag packed, homework done, drink bottle in the fridge.
+          {% elif joseph_has_school %}School is tomorrow for Joseph only. Joseph's bag packed, homework done, drink bottle in the fridge.
+          {% endif %}
+          {% if is_state('input_boolean.jacob_pe_tomorrow', 'on') %} Jacob has PE tomorrow and needs his kit ready.{% endif %}
+          {% if is_state('input_boolean.joseph_pe_tomorrow', 'on') %} Joseph has PE tomorrow and needs his kit ready.{% endif %}
+          End with a warning that a YouTube block is coming soon for anyone not sorted. Style: chaotic dad humour, dry sarcasm, short punchy sentences. No emojis.
       response_variable: agent_response
   - variables:
-      evening_prep_message: '{% set speech = agent_response.response.speech.plain.speech | default('''', true) %}{% set lower_speech = speech | lower %}{% if speech | trim == '''' or ''problem getting a response'' in lower_speech or ''google generative ai'' in lower_speech or ''unavailable'' in lower_speech or ''503'' in lower_speech or ''error'' in lower_speech %}Evening school prep. Bags packed, homework checked, uniforms found, and Jacob''s drink bottle in the fridge. Sort it out — YouTube block incoming for anyone who doesn''t.{% else %}{{ speech }}{% endif %}'
+      evening_prep_message: '{% set speech = agent_response.response.speech.plain.speech | default('''', true) %}{% set lower_speech = speech | lower %}{% if speech | trim == '''' or ''problem getting a response'' in lower_speech or ''google generative ai'' in lower_speech or ''unavailable'' in lower_speech or ''503'' in lower_speech or ''error'' in lower_speech %}Evening school prep. Bags packed, homework checked, uniforms found, and drink bottles in the fridge. Sort it out — YouTube block incoming for anyone who doesn''t.{% else %}{{ speech }}{% endif %}'
   - action: notify.alexa_media
     data:
       message: '{{ evening_prep_message }}'
@@ -583,41 +621,76 @@
     - action: input_boolean.turn_on
       target:
         entity_id: input_boolean.kit_check_active
-  - action: notify.jacob_notify
-    data:
-      title: School Prep
-      message: '{{ evening_prep_message }}'
-  - action: notify.joseph_notify
-    data:
-      title: School Prep
-      message: '{{ evening_prep_message }}'
-  - action: notify.jacob_notify
-    data:
-      title: Drink bottles
-      message: Jacob. How many drink bottles have you got in the fridge for tomorrow?
-      data:
-        actions:
-        - action: JACOB_DRINK_ONE
-          title: 1 bottle
-        - action: JACOB_DRINK_TWO
-          title: 2 bottles
-        - action: JACOB_DRINK_NONE
-          title: None yet
   - if:
-    - condition: state
-      entity_id: input_boolean.jacob_pe_tomorrow
-      state: 'on'
+    - condition: template
+      value_template: '{{ jacob_has_school }}'
     then:
     - action: notify.jacob_notify
       data:
-        title: PE kit
-        message: Jacob. PE tomorrow. Is your kit sorted?
+        title: School Prep
+        message: '{{ evening_prep_message }}'
+    - action: notify.jacob_notify
+      data:
+        title: Drink bottles
+        message: Jacob. How many drink bottles have you got in the fridge for tomorrow?
         data:
           actions:
-          - action: JACOB_PE_DONE
-            title: Yes sorted
-          - action: JACOB_PE_NOT_YET
-            title: Not yet
+          - action: JACOB_DRINK_ONE
+            title: 1 bottle
+          - action: JACOB_DRINK_TWO
+            title: 2 bottles
+          - action: JACOB_DRINK_NONE
+            title: None yet
+    - if:
+      - condition: state
+        entity_id: input_boolean.jacob_pe_tomorrow
+        state: 'on'
+      then:
+      - action: notify.jacob_notify
+        data:
+          title: PE kit
+          message: Jacob. PE tomorrow. Is your kit sorted?
+          data:
+            actions:
+            - action: JACOB_PE_DONE
+              title: Yes sorted
+            - action: JACOB_PE_NOT_YET
+              title: Not yet
+  - if:
+    - condition: template
+      value_template: '{{ joseph_has_school }}'
+    then:
+    - action: notify.joseph_notify
+      data:
+        title: School Prep
+        message: '{{ evening_prep_message }}'
+    - action: notify.joseph_notify
+      data:
+        title: Drink bottles
+        message: Joseph. How many drink bottles have you got in the fridge for tomorrow?
+        data:
+          actions:
+          - action: JOSEPH_DRINK_ONE
+            title: 1 bottle
+          - action: JOSEPH_DRINK_TWO
+            title: 2 bottles
+          - action: JOSEPH_DRINK_NONE
+            title: None yet
+    - if:
+      - condition: state
+        entity_id: input_boolean.joseph_pe_tomorrow
+        state: 'on'
+      then:
+      - action: notify.joseph_notify
+        data:
+          title: PE kit
+          message: Joseph. PE tomorrow. Is your kit sorted?
+          data:
+            actions:
+            - action: JOSEPH_PE_DONE
+              title: Yes sorted
+            - action: JOSEPH_PE_NOT_YET
+              title: Not yet
   - if:
     - condition: state
       entity_id: input_boolean.youtube_block_enabled
@@ -793,161 +866,6 @@
       - input_boolean.jacob_drink_confirmed
       - input_boolean.jacob_pe_kit_confirmed
       - input_boolean.jacob_pe_tomorrow
-- id: joseph_school_evening_prep
-  alias: Joseph school evening prep
-  description: Evening school prep with AI announcement, PE detection, YouTube block, and actionable notifications (mirrors Jacob's, scoped to Joseph)
-  triggers:
-  - trigger: time
-    at: '19:00:00'
-  conditions:
-  - condition: time
-    weekday:
-    - sun
-    - mon
-    - tue
-    - wed
-    - thu
-  actions:
-  - action: calendar.get_events
-    target:
-      entity_id:
-      - calendar.jacob_timetable
-      - calendar.joseph_timetable
-    data:
-      start_date_time: '{{ (now().date() + timedelta(days=1)).strftime(''%Y-%m-%d'') }} 00:00:00'
-      end_date_time: '{{ (now().date() + timedelta(days=1)).strftime(''%Y-%m-%d'') }} 23:59:59'
-    response_variable: tomorrow_school_events
-  - if:
-    - condition: template
-      value_template: '{{ (now().date() + timedelta(days=1)).weekday() >= 5 or (tomorrow_school_events[''calendar.joseph_timetable''][''events'']) | selectattr(''summary'', ''search'', ''holiday|half\s*-?\s*term|inset|bank'', ignorecase=True) | list | count > 0 }}'
-    then:
-    - stop: Tomorrow is not a school day
-  - action: input_boolean.turn_off
-    target:
-      entity_id:
-      - input_boolean.joseph_drink_confirmed
-      - input_boolean.joseph_pe_kit_confirmed
-      - input_boolean.joseph_pe_tomorrow
-      - input_boolean.kit_check_active
-  - action: calendar.get_events
-    target:
-      entity_id:
-      - calendar.boys_school
-      - calendar.joseph_timetable
-    data:
-      start_date_time: '{{ (now().date() + timedelta(days=1)).strftime(''%Y-%m-%d'') }} 00:00:00'
-      end_date_time: '{{ (now().date() + timedelta(days=1)).strftime(''%Y-%m-%d'') }} 23:59:59'
-    response_variable: school_events
-  - if:
-    - condition: template
-      value_template: '{{ (school_events[''calendar.boys_school''][''events''] + school_events[''calendar.joseph_timetable''][''events'']) | selectattr(''summary'', ''search'', ''PE'', ignorecase=True) | list | count > 0 }}'
-    then:
-    - action: input_boolean.turn_on
-      target:
-        entity_id: input_boolean.joseph_pe_tomorrow
-  - variables:
-      joseph_school_event_text: '{% set evts = school_events[''calendar.boys_school''][''events''] %} {{ evts | map(attribute=''summary'') | join(''; '') }}'
-  - action: conversation.process
-    data:
-      agent_id: conversation.evening_prep
-      text: 'Write a short evening school prep announcement for both boys. School is tomorrow for Joseph. They need bags packed, homework done, and a drink bottle in the fridge. {% if is_state(''input_boolean.joseph_pe_tomorrow'', ''on'') %} Joseph also has PE tomorrow and needs his PE kit ready. {% endif %} {% if joseph_school_event_text | trim != '''' %} Joseph also has: {{ joseph_school_event_text }}. {% endif %} At the end, add one short sentence warning that a YouTube block is coming soon for anyone who doesn''t confirm their kit is sorted. Style: chaotic dad humour, dry sarcasm, short punchy sentences. No emojis. No baby talk. Address both boys directly.'
-    response_variable: agent_response
-  - if:
-    - condition: template
-      value_template: '{% set speech = agent_response.response.speech.plain.speech | default('''', true) %}{% set lower_speech = speech | lower %}{{ speech | trim == '''' or ''problem getting a response'' in lower_speech or ''google generative ai'' in lower_speech or ''unavailable'' in lower_speech or ''503'' in lower_speech or ''error'' in lower_speech }}'
-    then:
-    - delay: 00:00:30
-    - action: conversation.process
-      data:
-        agent_id: conversation.evening_prep
-        text: 'Try again. Write a short evening school prep announcement for both boys. School is tomorrow for Joseph. Bags packed, homework done, drink bottle in the fridge. {% if is_state(''input_boolean.joseph_pe_tomorrow'', ''on'') %} Joseph has PE tomorrow and needs his kit ready. {% endif %} End with a warning that a YouTube block is coming soon for anyone not sorted. Style: chaotic dad humour, dry sarcasm, short punchy sentences. No emojis.'
-      response_variable: agent_response
-  - variables:
-      evening_prep_message: '{% set speech = agent_response.response.speech.plain.speech | default('''', true) %}{% set lower_speech = speech | lower %}{% if speech | trim == '''' or ''problem getting a response'' in lower_speech or ''google generative ai'' in lower_speech or ''unavailable'' in lower_speech or ''503'' in lower_speech or ''error'' in lower_speech %}Evening school prep. Bags packed, homework checked, uniforms found, and a drink bottle in the fridge. Sort it out — YouTube block incoming for anyone who doesn''t.{% else %}{{ speech }}{% endif %}'
-  - action: notify.alexa_media
-    data:
-      message: '{{ evening_prep_message }}'
-      target:
-      - media_player.lounge_plus
-      - media_player.boy_s_new_dot
-      - media_player.bedroom_dot
-      - media_player.kitchen_dot
-      data:
-        type: announce
-        volume: 0.5
-        method: all
-  - if:
-    - condition: state
-      entity_id: input_boolean.youtube_block_enabled
-      state: 'on'
-    then:
-    - action: shell_command.youtube_block_kids
-      response_variable: block_result
-    - action: input_boolean.turn_on
-      target:
-        entity_id: input_boolean.kit_check_active
-  - action: notify.jacob_notify
-    data:
-      title: School Prep
-      message: '{{ evening_prep_message }}'
-  - action: notify.joseph_notify
-    data:
-      title: School Prep
-      message: '{{ evening_prep_message }}'
-  - action: notify.joseph_notify
-    data:
-      title: Drink bottles
-      message: Joseph. How many drink bottles have you got in the fridge for tomorrow?
-      data:
-        actions:
-        - action: JOSEPH_DRINK_ONE
-          title: 1 bottle
-        - action: JOSEPH_DRINK_TWO
-          title: 2 bottles
-        - action: JOSEPH_DRINK_NONE
-          title: None yet
-  - if:
-    - condition: state
-      entity_id: input_boolean.joseph_pe_tomorrow
-      state: 'on'
-    then:
-    - action: notify.joseph_notify
-      data:
-        title: PE kit
-        message: Joseph. PE tomorrow. Is your kit sorted?
-        data:
-          actions:
-          - action: JOSEPH_PE_DONE
-            title: Yes sorted
-          - action: JOSEPH_PE_NOT_YET
-            title: Not yet
-  - if:
-    - condition: state
-      entity_id: input_boolean.youtube_block_enabled
-      state: 'on'
-    then:
-    - action: notify.mobile_app_jon_phone
-      data:
-        title: 🎒 Kit Check Active
-        message: YouTube, TikTok & Facebook blocked. Tap to unblock once kit is confirmed.
-        data:
-          actions:
-          - action: KIT_CHECK_DONE
-            title: ✅ All sorted — unblock
-    - action: notify.mobile_app_sm_a566b
-      data:
-        title: 🎒 Kit Check Active
-        message: YouTube, TikTok & Facebook blocked. Tap to unblock once kit is confirmed.
-        data:
-          actions:
-          - action: KIT_CHECK_DONE
-            title: ✅ All sorted — unblock
-    - action: rest_command.home_api_notify
-      data:
-        title: 🎒 Kit Check Active
-        body: YouTube, TikTok & Facebook blocked. Tap to unblock once the boys' kit is sorted.
-        data: '{"action": "KIT_CHECK_DONE"}'
-  mode: single
 - id: joseph_task_nagger
   alias: Joseph task nagger
   description: Reminds Joseph every 30 mins if tasks are still unconfirmed
