@@ -31,6 +31,10 @@ ZHA, ESPHome (14 devices), Alexa Media (15+ Echo devices), Philips JS TV (occasi
 - Weather duplicate automations (weather/weather_2) - cleanup pending.
 - Second alarm entity alarm_control_panel.home_alarm - unused/undeployed template alias, not live.
 
+## School automations
+
+- 14 Sep 2026: merged jacob_school_evening_prep and joseph_school_evening_prep (both fired at 19:00 Sun-Thu, both announced "for both boys" over all 4 speakers, duplicating notifications and the YouTube block - a leftover from when the boys were at different schools) into a single automation.family_school_evening_prep, which computes each boy's school-day status independently and only sends each boy's own notifications when he has school.
+
 ## Alarm Panel V2 (upstairs, landing) - ESP32/Arduino
 
 Two-board split: screen board (Freenove FNK0104N, Arduino - ST77922 display not in ESPHome's chip list) + brain board (ESP32-WROOM-32, ESPHome). Full reasoning/history lives in Alarm_Panel_V2_Decision_Log.md / Alarm_Panel_V2_Current_State_Spec.md. As of 13 Aug 2026: pin maps, power plan, OTA, and standalone power all confirmed/done. Still open: UART bench test, backup battery/enclosure, voice build-out, arm/disarm control screen, TTS/audio, function of 2 retained PCF8574 buttons.
