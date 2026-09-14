@@ -321,12 +321,12 @@
       - switch.jacob_club
       - switch.joseph_club
   id: e25dfb70adfe42f98cb1d7ec7fb7ff8d
-- id: '1769605667434'
-  alias: Jacob Bags
-  description: Announce to Jacob at 8:00 AM on school days via Lounge Plus
+- id: family_bags_reminder
+  alias: Family Bags Reminder
+  description: Morning bag reminder at 8:00 AM on school days, via Lounge Plus - Jacob gets a simple message, Joseph an AI-generated fun one, each independently gated on his own school day (merged 14 Sep 2026, both fired at the same 08:00:00 time anyway)
   triggers:
-  - at: 08:00:00
-    trigger: time
+  - trigger: time
+    at: 08:00:00
   conditions:
   - condition: time
     weekday:
@@ -335,55 +335,43 @@
     - wed
     - thu
     - fri
-  - condition: state
-    entity_id: input_boolean.jacob_school_day
-    state: 'on'
   actions:
-  - data:
+  - if:
+    - condition: state
+      entity_id: input_boolean.jacob_school_day
+      state: 'on'
+    then:
+    - action: notify.alexa_media_lounge_plus
       data:
-        type: announce
-        method: speak
-      message: Jacob, Bags ready
-    action: notify.alexa_media_lounge_plus
-  - data:
-      message: Bags
-      title: School Reminder
-    action: notify.jacob_notify
-  mode: single
-- id: '1769605762600'
-  alias: Joseph Bags
-  description: Announce to Joseph at 8:00 AM on school days via Lounge Plus
-  triggers:
-  - at: 08:00:00
-    trigger: time
-  conditions:
-  - condition: time
-    weekday:
-    - mon
-    - tue
-    - wed
-    - thu
-    - fri
-  - condition: state
-    entity_id: input_boolean.joseph_school_day
-    state: 'on'
-  actions:
-  - action: conversation.process
-    metadata: {}
-    data:
-      text: make this more fun for an 11 year old "joseph get  your school bag ready!"
-      agent_id: conversation.bags
-    response_variable: agent
-  - variables:
-      joseph_bags_message: "{% set speech = agent.response.speech.plain.speech | default('', true) %}\n{% set lower_speech = speech | lower %}\n{% if speech | trim == '' or 'problem getting a response' in lower_speech or 'google generative ai' in lower_speech or 'unavailable' in lower_speech or '503' in lower_speech or 'error' in lower_speech %}\n  Joseph, tiny plot twist: the joke machine is asleep. Your school bag is not. Get it ready before it starts charging rent in the hallway.\n{% else %}\n  {{ speech }}\n{% endif %}\n"
-  - action: notify.alexa_media_lounge_plus
-    data:
-      message: '{{ joseph_bags_message }}'
-  - action: notify.joseph_notify
-    data:
-      message: '{{ joseph_bags_message }}'
-      title: School Reminder
-    enabled: true
+        data:
+          type: announce
+          method: speak
+        message: Jacob, Bags ready
+    - action: notify.jacob_notify
+      data:
+        message: Bags
+        title: School Reminder
+  - if:
+    - condition: state
+      entity_id: input_boolean.joseph_school_day
+      state: 'on'
+    then:
+    - action: conversation.process
+      metadata: {}
+      data:
+        text: make this more fun for an 11 year old "joseph get  your school bag ready!"
+        agent_id: conversation.bags
+      response_variable: agent
+    - variables:
+        joseph_bags_message: "{% set speech = agent.response.speech.plain.speech | default('', true) %}\n{% set lower_speech = speech | lower %}\n{% if speech | trim == '' or 'problem getting a response' in lower_speech or 'google generative ai' in lower_speech or 'unavailable' in lower_speech or '503' in lower_speech or 'error' in lower_speech %}\n  Joseph, tiny plot twist: the joke machine is asleep. Your school bag is not. Get it ready before it starts charging rent in the hallway.\n{% else %}\n  {{ speech }}\n{% endif %}\n"
+    - action: notify.alexa_media_lounge_plus
+      data:
+        message: '{{ joseph_bags_message }}'
+    - action: notify.joseph_notify
+      data:
+        message: '{{ joseph_bags_message }}'
+        title: School Reminder
+      enabled: true
   mode: single
 - id: '1770795001627'
   alias: Check if Google Mini was used tonight
