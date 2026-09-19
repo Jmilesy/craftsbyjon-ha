@@ -1,13 +1,15 @@
 from datetime import datetime
 
 import requests
+from bs4 import BeautifulSoup
 from waste_collection_schedule import Collection, Icons  # type: ignore[attr-defined]
 
 TITLE = "Dover District Council"
 DESCRIPTION = "Source for Dover District Council."
 URL = "https://www.dover.gov.uk"
 TEST_CASES = {
-    "Ranelagh Road": {"uprn": "10034882837", "postcode": "CT14 7BG"},
+    "200002423404": {"uprn": 200002423404},
+    "100060905828": {"uprn": "100060905828"},
 }
 
 
@@ -19,81 +21,45 @@ ICON_MAP = {
     "Recycling Collection": Icons.RECYCLING,
 }
 
-# Dover District Council's portal ID within their WasteWorks-style backend.
-# Confirmed live via browser Network tab capture, 29 Aug 2026 - not documented
-# anywhere, but has been stable and is unlikely to change per-council.
-COUNCIL_ID = "39"
 
-BASE_URL = "https://portal.waste.dover.gov.uk/api"
-SEARCH_URL = f"{BASE_URL}/getPropertySearch"
-COLLECTIONS_URL = f"{BASE_URL}/getCollectionDays"
-
-HEADERS = {"Content-Type": "application/json"}
+API_URL = "https://collections.dover.gov.uk/"
 
 
 class Source:
-    def __init__(self, uprn: str | int, postcode: str):
-        self._uprn: str = str(uprn)
-        self._postcode: str = postcode.replace(" ", "")
-        self._point_id: str | None = None
-
-    def _resolve_point_id(self) -> str:
-        """Dover's API only supports searching by postcode/address text, not
-        UPRN directly. Search by postcode, then match on the returned UPRN
-        to find the property's internal pointId."""
-        response = requests.post(
-            SEARCH_URL,
-            json={"councilId": COUNCIL_ID, "searchQuery": self._postcode},
-            headers=HEADERS,
-        )
-        response.raise_for_status()
-        data = response.json()
-
-        for match in data.get("data", []):
-            if str(match.get("uprn", "")) == self._uprn:
-                return str(match["id"])
-
-        raise ValueError(
-            f"No property found for UPRN {self._uprn} at postcode "
-            f"{self._postcode}. Check both values are correct."
-        )
+    def __init__(self, uprn: str | int):
+        self._uprn: str | int = uprn
 
     def fetch(self) -> list[Collection]:
-        if self._point_id is None:
-            self._point_id = self._resolve_point_id()
+        # copy of haringey_gov_uk.py just some minor changes
+        api_url = f"https://collections.dover.gov.uk/property/{self._uprn}"
+        response = requests.get(api_url)
 
-        response = requests.post(
-            COLLECTIONS_URL,
-            json={
-                "pointId": self._point_id,
-                "pointType": "PointAddress",
-                "councilId": COUNCIL_ID,
-            },
-            headers=HEADERS,
-        )
-        response.raise_for_status()
-        data = response.json()
+        soup = BeautifulSoup(response.text, features="html.parser")
+        soup.prettify()
 
         entries = []
 
-        for service in data.get("activeServices", []):
-            service_name = service.get("serviceName", "")
+        service_elements = soup.select(".service-wrapper")
 
-            for schedule in service.get("serviceSchedules", []):
-                date_str = schedule.get("currentScheduledDate") or schedule.get(
-                    "originalScheduledDate"
-                )
-                if not date_str:
+        for service_element in service_elements:
+            service_name = service_element.select(".service-name")[0].text.strip()
+
+            next_service_dates = service_element.select(
+                "td.next-service"
+            ) + service_element.select("td.last-service")
+            if len(next_service_dates) == 0:
+                continue
+            for next_service_date in next_service_dates:
+                next_service_date.span.extract()
+
+                if next_service_date.text.strip().strip("-") == "":
                     continue
-
-                # e.g. "2026-09-04T00:00:00+01:00"
-                collection_date = datetime.strptime(
-                    date_str[:10], "%Y-%m-%d"
-                ).date()
 
                 entries.append(
                     Collection(
-                        date=collection_date,
+                        date=datetime.strptime(
+                            next_service_date.text.strip(), "%d/%m/%Y"
+                        ).date(),
                         t=service_name,
                         icon=ICON_MAP.get(service_name),
                     )
