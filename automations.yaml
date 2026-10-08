@@ -1970,7 +1970,7 @@
       target:
         entity_id: input_text.boys_school
       data:
-        value: "{%- set events = (jacob_events['calendar.jacob_timetable']['events'] + joseph_events['calendar.joseph_timetable']['events']) |\n   map(attribute='summary') | list -%}\n{% if events %}{{ events | join(', ') }}{% else %}School day{% endif %}\n"
+        value: School day
   mode: single
 - id: boys_timetable_text
   alias: Boys Timetable Text
