@@ -30,10 +30,12 @@ ZHA, ESPHome (14 devices), Alexa Media (15+ Echo devices), Philips JS TV (occasi
 - automation.school_panel_wake_on_landing_motion naming mismatch (friendly name says "Kitchen Motion", entity says landing) - not resolved.
 - Weather duplicate automations (weather/weather_2) - cleanup pending.
 - Second alarm entity alarm_control_panel.home_alarm - unused/undeployed template alias, not live.
+- binary_sensor.front_door_2 (Wing TS0203 door sensor, ZHA) looks stale as of 8 Oct 2026: it has shown on (open) since the 20 Sep 2026 HA restart, automation.front_door last triggered on 26 Aug, and ZHA's cached zone status was last updated on 3 Sep, while the sensor was still sending battery reports on 8 Oct (10:12 UTC). Its parent is the Zigbee coordinator (link quality 94 of 255). Whether the door was physically open was not checked. Open question for Jon: open and close the front door once and see whether HA registers either change.
 
 ## School automations
 
 - 14 Sep 2026: merged jacob_school_evening_prep and joseph_school_evening_prep (both fired at 19:00 Sun-Thu, both announced "for both boys" over all 4 speakers, duplicating notifications and the YouTube block - a leftover from when the boys were at different schools) into a single automation.family_school_evening_prep, which computes each boy's school-day status independently and only sends each boy's own notifications when he has school.
+- 8 Oct 2026, OPEN: input_text.boys_school (the headline shown on the Downstairs school screen) has a 100 character limit in HA. On school days automation.school_day_manager builds the text from both boys' timetables, which was over 170 characters on 8 Oct, so HA rejects it ('Invalid value ... length range 0 - 100' in the log at 14:05 BST) and the helper keeps its old value, 'Enjoy your day off'. That helper had not changed since 20 Sep 11:05 UTC. input_boolean.school_day, jacob_school_day and joseph_school_day were correct, and the per-boy timetable helpers (limit 255) hold the right lessons. Not fixed yet. Proposed fix: write a short headline such as 'School day' and leave the lessons to the timetable helpers. Decision pending with Jon.
 
 ## Alarm Panel V2 (upstairs, landing) - ESP32/Arduino
 
@@ -42,6 +44,15 @@ Two-board split: screen board (Freenove FNK0104N, Arduino - ST77922 display not 
 ## AlarmPanel_Downstairs - ESP32/Arduino (school panel + downstairs alarm control)
 
 Freenove FNK0104S (ST7796 display, different chip from upstairs' ST77922 - do not copy pin/driver assumptions across). Static IP 192.168.20.115 on IoT VLAN. Three screens: ARMED (status + on-screen keypad wired to Alarmo disarm), INFO (school content only - weather widget exists in code but not yet wired in), MENU (3x3 room grid). Old school-reminders 20x4 LCD still running in parallel, not yet decommissioned. Built via ChatGPT (not Claude) - flagged in ha-truth.md as reconstructed from code/chat history rather than a first-hand build log, so treat with extra caution versus the upstairs section.
+
+Added 8 Oct 2026 (checked against the live HA request log, the sketch source and the sketch repo's git history):
+
+- Source: GitHub repo Jmilesy/AlarmPanel_Downstairs, working copy C:\dev\AlarmPanel_Downstairs on JonPC. Build and library notes are in that repo's BUILD_NOTES.md and EXTERNAL_LIBRARY_NOTES.md. The repo is not yet listed in the RULES.md repositories table.
+- The panel polls HA's REST API about every 5 minutes over HTTPS, 15 requests per poll. The list of entities is in BUILD_NOTES.md under 'School screen data sources'. HA also pushes to the panel through rest_command (refresh, wake, alert and alert-clear endpoints).
+- The headline label on the school screen shows input_text.boys_school exactly as HA holds it. See the 8 Oct 2026 entry under School automations for why that text is currently stuck.
+- Sandown: the panel still sends calendar.sandown_school_calendar (deleted from HA) in its calendar/get_events request every 5 minutes, and HA logs a missing-entity warning each time. Confirmed from timing in the HA request log (the warning lands inside the panel's get_events request; request bodies are not logged). The fix is committed on branch fix/school-panel-remove-sandown in the sketch repo (commit 36d42da). It compiled cleanly but has NOT been merged or flashed as of 8 Oct 2026, so the warnings continue.
+- OTA: POST /update on port 80 with HTTP Basic Auth (ota.cpp in the sketch). Whether JonPC can reach 192.168.20.115 directly or needs the NUC relay used for the upstairs board has not been confirmed.
+- Weather: weather data is polled, but no references to lcarsWeather were found in AlarmPanel_Downstairs.ino, lcars_ui.cpp, lcars_menu.cpp or lcars_school.cpp on 8 Oct 2026, consistent with the widget not being wired in.
 
 ## Notify services
 
