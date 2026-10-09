@@ -2742,3 +2742,23 @@
   - action: switch.turn_off
     target:
       entity_id: switch.pump
+- id: kitchen_pump_failsafe_1min
+  alias: Kitchen Pump - Failsafe Off After 1 Minute
+  description: >-
+    Failsafe for switch.pump (kitchen ESP GPIO12). If the pump has been on
+    for 1 minute continuously, for any reason (the 3am run lost to an HA
+    restart, a manual switch-on left running), switch it off. The 3am run
+    only lasts 30s so this never interrupts it. Note this also caps manual
+    runs at 1 minute.
+  mode: single
+  triggers:
+  - trigger: state
+    entity_id: switch.pump
+    to: 'on'
+    for:
+      minutes: 1
+  conditions: []
+  actions:
+  - action: switch.turn_off
+    target:
+      entity_id: switch.pump
