@@ -79,3 +79,6 @@ See ha-truth.md (frozen 13 Sep 2026) for the full integration tables, automation
 - HACS integration thomasloven/hass-browser_mod v3.3.0, installed via HACS at Jon's request, HA restarted, config entry "Browser Mod" added and loaded (no options). custom_components is git-ignored, so the install itself is not in git.
 - Nothing uses it yet. Each browser or tablet becomes a device once it has loaded the dashboard and been registered in the Browser Mod panel in the HA sidebar.
 - Checked after the restart: both kitchen pump automations still on.
+
+## GitHub Actions safety workflow
+- .github/workflows/config-safety.yml ("Home Assistant config safety") runs on push to main and on pull requests. Jon reported repeated failures (job failed in 5 seconds). Cause found by reproducing the steps from a depth-1 clone: actions/checkout fetches only one commit by default, so `git diff --check HEAD^ HEAD` had no parent to compare with ("unknown revision HEAD^"). Fixed 9 Oct 2026 by adding `fetch-depth: 2` to the checkout step. The other two steps (forbidden tracked files, py_compile) passed in the same depth-1 clone.
