@@ -74,3 +74,8 @@ notify.alexa_media_lounge_plus, notify.alexa_media_everywhere, notify.alexa_medi
 ## For full history and the complete planned-improvements backlog
 
 See ha-truth.md (frozen 13 Sep 2026) for the full integration tables, automation list, and the tiered (tonight/short-term/longer-term) improvements backlog - none of that was reproduced here since it's a task list, not current state; check the task DB (priorities-api) for what's actually still open.
+
+## Browser Mod (added 9 Oct 2026)
+- HACS integration thomasloven/hass-browser_mod v3.3.0, installed via HACS at Jon's request, HA restarted, config entry "Browser Mod" added and loaded (no options). custom_components is git-ignored, so the install itself is not in git.
+- Nothing uses it yet. Each browser or tablet becomes a device once it has loaded the dashboard and been registered in the Browser Mod panel in the HA sidebar.
+- Checked after the restart: both kitchen pump automations still on.
