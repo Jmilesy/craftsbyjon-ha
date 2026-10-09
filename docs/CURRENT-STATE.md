@@ -8,7 +8,7 @@
 
 | Item | Detail |
 |---|---|
-| HA instance | NUC at 192.168.1.104, HA version 2026.8.1 (as of 13 Aug 2026 - check HA_VERSION file for current) |
+| HA instance | NUC at 192.168.1.104, Supervisor-managed install (Supervisor reports unsupported: os, software), Core 2026.10.0 (updated from 2026.9.3 on 9 Oct 2026; the .HA_VERSION file in the repo root holds the live version) |
 | External URL | https://ha.craftsbyjon.co.uk |
 | Internal URL | https://192.168.1.104:8123 |
 | Media server | 192.168.1.76 (Grafana, OctoPrint, Tautulli, Plex) |
@@ -23,6 +23,8 @@ ZHA, ESPHome (14 devices), Alexa Media (15+ Echo devices), Philips JS TV (occasi
 
 ## Known open issues (as of 13 Aug 2026 - verify current status before acting)
 
+- 9 Oct 2026, Core updated 2026.9.3 to 2026.10.0 via `ha core update`, after reading the 2026.10 release notes and checking the backward-incompatible changes against this setup (none affect the config: usernames are already normalised, mqtt.publish is only called from automations, no state condition combines `for` with an attribute, list or other entity, and none of the removed or changed integrations are installed). Pre-update backup: `pre-HA-2026.10.0` (slug b73d0519, config folder including the database) on the NUC. The first update attempt failed straight away with "Downloading Home Assistant version 2026.10.0 failed" (cause not established); pre-pulling the image with `docker pull ghcr.io/home-assistant/qemux86-64-homeassistant:2026.10.0` and running the update again worked. After the restart, comparing the recorder database before and after, the only entities that went from available to unavailable were device_tracker.mht_kew_58l_56b3 and sensor.mht_kew_58l_56b3_estimated_distance (a Bluetooth beacon tracker).
+- Open after the 2026.10.0 update: Spook is 5.5.0, and Spook 5.8.1 (released 5 Oct 2026) fixes 13 actions losing the filter on their target picker on 2026.10. Update Spook via HACS. meross_lan 5.8.0 logs a deprecation warning (via_device) and reads DeviceEntry.config_entries at config_flow.py line 1036; custom integrations only get a warning for that until Core 2027.10.
 - Waste Collection Schedule - DDC calendar source broken (DDC rebuilt as Next.js, scraper needs fixing).
 - bedroom DHT11 reading 43.7C - sensor likely dead or miswired.
 - Hall + dining room multi-sensors - both at 10% battery as of last check.
