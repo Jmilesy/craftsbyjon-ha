@@ -2719,3 +2719,26 @@
     - action: shell_command.printer_print_text
       data:
         content_b64: "{{ trigger.json.content_b64 }}"
+- id: kitchen_pump_3am_30s
+  alias: Kitchen Pump - Run 30s at 3am
+  description: >-
+    Runs the kitchen ESP pump (switch.pump, GPIO12 on the kitchen device) for
+    30 seconds every night at 03:00. The off step always runs, even if the on
+    call reports an error, so the pump is never left running by a failed call.
+    Note: if HA restarts during the 30s window the delay is lost and the pump
+    stays on until switched off.
+  mode: single
+  triggers:
+  - trigger: time
+    at: '03:00:00'
+  conditions: []
+  actions:
+  - action: switch.turn_on
+    target:
+      entity_id: switch.pump
+    continue_on_error: true
+  - delay:
+      seconds: 30
+  - action: switch.turn_off
+    target:
+      entity_id: switch.pump
