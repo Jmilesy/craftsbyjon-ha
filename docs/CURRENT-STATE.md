@@ -43,6 +43,7 @@ ZHA, ESPHome (14 devices), Alexa Media (15+ Echo devices), Philips JS TV (occasi
 ## Kitchen pump
 
 - 9 Oct 2026: added automation.kitchen_pump_run_30s_at_3am (id kitchen_pump_3am_30s, automations.yaml). Turns switch.pump (the "Pump" gpio switch on GPIO12 of the kitchen ESPHome device, kitchen.yaml) on at 03:00 every night, waits 30 seconds, then turns it off. The off step runs even if the on call errors. Known limitation: if HA restarts during the 30 second window the delay is lost and the pump stays on until switched off. The kitchen.yaml pump switch has no firmware-side auto-off. Not yet test-fired: first real run is the 03:00 after merge.
+- 9 Oct 2026: added failsafe automation.kitchen_pump_failsafe_1min (id kitchen_pump_failsafe_1min): if switch.pump has been on continuously for 1 minute it is switched off (Jon chose 1 minute). Intended to cover the HA-restart-during-the-3am-run gap (not tested) and any manual run left on. Side effect: manual runs are capped at 1 minute. This only works while HA is running; if HA is down the pump has no other off mechanism.
 
 ## Alarm Panel V2 (upstairs, landing) - ESP32/Arduino
 
