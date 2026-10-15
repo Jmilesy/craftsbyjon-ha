@@ -82,3 +82,10 @@ See ha-truth.md (frozen 13 Sep 2026) for the full integration tables, automation
 
 ## GitHub Actions safety workflow
 - .github/workflows/config-safety.yml ("Home Assistant config safety") runs on push to main and on pull requests. Jon reported repeated failures (job failed in 5 seconds). Cause found by reproducing the steps from a depth-1 clone: actions/checkout fetches only one commit by default, so `git diff --check HEAD^ HEAD` had no parent to compare with ("unknown revision HEAD^"). Fixed 9 Oct 2026 by adding `fetch-depth: 2` to the checkout step. The other two steps (forbidden tracked files, py_compile) passed in the same depth-1 clone.
+
+## Git commit identity (added 15 Oct 2026)
+- A pre-commit and a pre-merge-commit hook in the repo .git/hooks (untracked, so not stored in git) block any commit unless GIT_AUTHOR_NAME, GIT_AUTHOR_EMAIL, GIT_COMMITTER_NAME and GIT_COMMITTER_EMAIL are all set, so each commit records who actually made it. Claude commits as Claude <noreply@anthropic.com>.
+- The nightly ha-github-backup (03:23) exports HA_GIT_SAVE_AUTOMATION=1, which the hook treats as exempt. Its commits still use the repo default identity, Jon Miles <jon@craftsbyjon.co.uk>.
+- Anyone else committing here (Codex, a manual session) must set the four GIT_* variables, or the commit is refused with a message saying so.
+- Limits: git commit --no-verify skips the hooks. Rebase and cherry-pick paths were not tested. Other repos have no hook yet.
+- Live script /usr/local/bin/ha-github-backup was edited to match scripts/ha-github-backup.sh; backup kept as ha-github-backup.bak-20261015-gitidentity. Decision logged in craftsbyjon-docs/decision-log/2026-10-15-git-commit-identity.md.
