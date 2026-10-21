@@ -27,7 +27,8 @@ esphome:
   project:
     name: "klaasnicolaas.home_assistant_glow"
     version: "3.0.0"
-  platform: ESP8266
+
+esp8266:
   board: d1_mini_lite
 
 # WiFi credentials #
@@ -56,7 +57,9 @@ api:
             id: button_reset_total
 
 ota:
-  safe_mode: true
+  - platform: esphome
+
+safe_mode:
   reboot_timeout: 10min
   num_attempts: 5
 
@@ -71,18 +74,8 @@ output:
   #   pin: GPIO5
   #   id: output_blue
   - platform: gpio
-    pin: GPIO2
-    id: output_red
-  - platform: gpio
     pin: GPIO4
     id: output_green
-
-light:
-  - platform: binary
-    internal: true
-    id: led_red
-    name: Red
-    output: output_red
 
 # Status LED for connection
 status_led:
@@ -131,13 +124,6 @@ sensor:
     accuracy_decimals: 0
     pin: ${pulse_pin}
     # internal_filter: 100ms
-    on_value:
-      then:
-        - light.turn_on:
-            id: led_red
-        - delay: 0.5s
-        - light.turn_off:
-            id: led_red
     filters:
       # multiply value = (60 / imp value) * 1000
       # - multiply: 60
