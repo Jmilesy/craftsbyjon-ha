@@ -83,34 +83,6 @@ sensor:
     display_options:
       - 'time'
 
-# ============================================================
-# Waste Collection Schedule – Source Configuration
-# ============================================================
-waste_collection_schedule:
-  sources:
-    - name: dover_gov_uk
-      args:
-        uprn: "10034882837"
-      customize:
-        - type: REFUSE
-          alias: "Refuse Collection"
-          icon: mdi:trash-can-outline
-        - type: FOOD
-          alias: "Food Collection"
-          icon: mdi:food
-        - type: RECYCLING
-          alias: "Recycling Collection"
-          icon: mdi:recycle
-        - type: PAPERCARD
-          alias: "Paper/Card Collection"
-          icon: mdi:package-variant
-  sensors:
-    - name: "Next Waste Collection"
-      source_index: 0
-      count: 3
-      leadtime: 60
-      add_days_to: true
-
 notify:
   - platform: group
     name: jon_notify
