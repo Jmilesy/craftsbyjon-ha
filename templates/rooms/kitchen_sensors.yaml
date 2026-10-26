@@ -5,14 +5,14 @@
     # ------------------------------------------------------------
     - name: waste_raw
       unique_id: waste_raw
-      state: "{{ states('sensor.next_waste_collection') }}"
+      state: "{{ states('sensor.dover_next_collection') }}"
 
     # ------------------------------------------------------------
     # Days until next collection
     # ------------------------------------------------------------
     - name: waste_days_to
       unique_id: waste_days_to
-      state: "{{ state_attr('sensor.next_waste_collection', 'daysTo') }}"
+      state: "{{ state_attr('sensor.dover_next_collection', 'daysTo') }}"
 
     # ------------------------------------------------------------
     # First collection date (ISO)
@@ -21,7 +21,7 @@
       unique_id: waste_next_date
       device_class: date
       state: >
-        {% set days = state_attr('sensor.next_waste_collection', 'daysTo') %}
+        {% set days = state_attr('sensor.dover_next_collection', 'daysTo') %}
         {{ (now().date() + timedelta(days=days | int)) if days is not none else 'unknown' }}
 
     # ------------------------------------------------------------
@@ -30,7 +30,7 @@
     - name: waste_next_friendly_date
       unique_id: waste_next_friendly_date
       state: >
-        {% set days = state_attr('sensor.next_waste_collection', 'daysTo') %}
+        {% set days = state_attr('sensor.dover_next_collection', 'daysTo') %}
         {% if days is not none %}
           {% set d = now() + timedelta(days=days | int) %}
           {{ d.strftime('%A %-d %B %Y') }}
@@ -44,7 +44,7 @@
     - name: waste_next_relative
       unique_id: waste_next_relative
       state: >
-        {% set days = state_attr('sensor.next_waste_collection', 'daysTo') %}
+        {% set days = state_attr('sensor.dover_next_collection', 'daysTo') %}
         {% if days is none %}
           unknown
         {% elif days | int == 0 %}
@@ -62,7 +62,7 @@
       unique_id: waste_second_date
       device_class: date
       state: >
-        {% set first = state_attr('sensor.next_waste_collection', 'daysTo') %}
+        {% set first = state_attr('sensor.dover_next_collection', 'daysTo') %}
         {{ (now().date() + timedelta(days=(first | int) + 7)) if first is not none else 'unknown' }}
 
     # ------------------------------------------------------------
@@ -71,7 +71,7 @@
     - name: waste_second_friendly_date
       unique_id: waste_second_friendly_date
       state: >
-        {% set first = state_attr('sensor.next_waste_collection', 'daysTo') %}
+        {% set first = state_attr('sensor.dover_next_collection', 'daysTo') %}
         {% if first is not none %}
           {% set d = now() + timedelta(days=(first | int) + 7) %}
           {{ d.strftime('%A %-d %B %Y') }}
@@ -85,7 +85,7 @@
     - name: waste_second_relative
       unique_id: waste_second_relative
       state: >
-        {% set first = state_attr('sensor.next_waste_collection', 'daysTo') %}
+        {% set first = state_attr('sensor.dover_next_collection', 'daysTo') %}
         {% if first is none %}
           unknown
         {% else %}
@@ -105,7 +105,7 @@
     - name: waste_types
       unique_id: waste_types
       state: >
-        {% set raw = states('sensor.next_waste_collection') %}
+        {% set raw = states('sensor.dover_next_collection') %}
         {{ raw.split(' in ')[0] if raw not in ['unknown', 'unavailable', 'none', ''] else 'unknown' }}
 
     # ------------------------------------------------------------

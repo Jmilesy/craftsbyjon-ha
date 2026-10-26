@@ -1,0 +1,38 @@
+- sensor:
+    # Next Dover bin collection, built from the council portal REST data
+    # (sensor.dover_waste_raw). Replaces the dead scraper sensor.next_waste_collection.
+    # State format "<types> in N days" and attribute daysTo are kept so the
+    # waste_* sensors in rooms/kitchen_sensors.yaml work unchanged.
+    - name: dover_next_collection
+      unique_id: dover_next_collection
+      icon: mdi:trash-can-outline
+      state: >
+        {% set wanted = ['Refuse Collection','Food Collection','Recycling Collection','Paper/Card Collection'] %}
+        {% set services = state_attr('sensor.dover_waste_raw','activeServices') or [] %}
+        {% set today = now().date() %}
+        {% set ns = namespace(items=[]) %}
+        {% for svc in services if svc.serviceName in wanted %}
+        {% for s in svc.serviceSchedules if s.completedDate is not defined %}
+        {% set d = strptime(s.currentScheduledDate[:10], '%Y-%m-%d').date() %}
+        {% if d >= today %}{% set ns.items = ns.items + [{'name': svc.serviceName, 'date': d}] %}{% endif %}
+        {% endfor %}
+        {% endfor %}
+        {% if ns.items | length == 0 %}unknown{% else %}
+        {% set first = (ns.items | sort(attribute='date'))[0].date %}
+        {% set names = ns.items | selectattr('date','eq',first) | map(attribute='name') | list %}
+        {% set days = (first - today).days %}
+        {{ names | join(', ') }}{{ ' today' if days == 0 else (' tomorrow' if days == 1 else ' in ' ~ days ~ ' days') }}
+        {% endif %}
+      attributes:
+        daysTo: >
+          {% set wanted = ['Refuse Collection','Food Collection','Recycling Collection','Paper/Card Collection'] %}
+          {% set services = state_attr('sensor.dover_waste_raw','activeServices') or [] %}
+          {% set today = now().date() %}
+          {% set ns = namespace(dates=[]) %}
+          {% for svc in services if svc.serviceName in wanted %}
+          {% for s in svc.serviceSchedules if s.completedDate is not defined %}
+          {% set d = strptime(s.currentScheduledDate[:10], '%Y-%m-%d').date() %}
+          {% if d >= today %}{% set ns.dates = ns.dates + [d] %}{% endif %}
+          {% endfor %}
+          {% endfor %}
+          {{ ((ns.dates | sort)[0] - today).days if ns.dates | length > 0 else none }}
