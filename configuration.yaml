@@ -91,7 +91,6 @@ waste_collection_schedule:
     - name: dover_gov_uk
       args:
         uprn: "10034882837"
-        postcode: "CT14 7BG"
       customize:
         - type: REFUSE
           alias: "Refuse Collection"
