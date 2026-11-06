@@ -105,6 +105,41 @@ Added 8 Oct 2026 (checked against the live HA request log, the sketch source and
 - Not recorded: whether any of these has a fixed address or a DHCP reservation.
 - Jon has spare Tasmota plugs that are not in Home Assistant; one is planned for Christmas lights (said 6 Nov 2026). He plans to label each plug with its name and IP address, and to move some devices to the IoT VLAN (192.168.20.0/24, VLAN 20). Nothing has been moved. The open questions that must be answered first (Wi-Fi network name, reservations, whether the firewall lets TCP 1883 through to the NUC) are listed in craftsbyjon-docs, infra/home-network.md.
 
+## Home Assistant core update 2026.11.0 (status 6 Nov 2026)
+- Running 2026.10.4. 2026.11.0 is available and has NOT been applied: on 6 Nov 2026 Jon chose to do it when he is home. The meross_lan v6 and iss_track v2 updates are to be done separately, after the core update (release notes read 6 Nov).
+- Items in the 2026.11 release notes that touch this setup:
+  - Entity naming: cards without a name now show the device name plus the entity name, and friendly_name is planned for deprecation in favour of entity_name(), device_name() and area_name(). Places here that read friendly_name (line numbers as of 6 Nov): automations.yaml (the Alexa "open for 10 minutes" announcement near line 190 and the "Welcome home" message near line 302), lovelace/dashboards/views/lights.yaml (sort method), www/f1-sensor-live-data-card, and home-api on the VPS (index.js line 134, person entities).
+  - HACS moves into core. It migrates automatically, with a risk notice that has to be accepted in the browser, and there is no separate HACS install afterwards (custom_components currently has hacs 2.0.5).
+  - Auth: "Invalid client id" for non-local addresses, including Tailscale, unless scheme, host and port match. Test logging in over Tailscale after the update.
+  - Also in the notes, not assessed in detail: UniFi device tracker changes, ZHA group devices, and Python dependency changes (Core in a venv; this install looks like a supervised one, so probably not relevant, not confirmed).
+- Before updating: take a backup, and get Jon's go-ahead for the restart. After: check the printer view (lovelace/dashboards/views/printer.yaml has 14 references to outlet_3 of the PC surge Meross switch), the PC surge switches, Alexa announcements, the dashboards, and login over Tailscale and in the browser.
+- Add-on auto-update: the Advanced SSH add-on (a0d7b954_ssh) has auto_update true and updated itself to 24.2.1 at 10:12 on 6 Nov 2026. Jon did not do it. That fits the auto_update setting, but the cause was not otherwise confirmed.
+
+## HA restart at 10:22 on 6 Nov 2026 (cause not found)
+- Supervisor logged "Restarting homeassistant" at 10:22:39, the logbook shows Home Assistant stopped at 10:22:39.9, and core was RUNNING again at 10:26:27. The version stayed 2026.10.4, so it was not an update. Jon did not restart it. No caller is recorded.
+- Looked at and found nothing: automations.yaml and configuration.yaml, crontabs on the VPS and the NUC, the scripts, the Node-RED flows (they only call turn_on and turn_off) and the repo history.
+- Power surge (Jon's suggestion): not supported by what was found. NUC uptime was 28 days, Supervisor and the other containers did not stop, the USG and the access point did not reboot (their uptime sensors show 9 Oct and 4 Nov), and the kitchen hub did not reboot. A surge that tripped nothing cannot be ruled out.
+- Not checked: whether anyone with admin used the UI or the app to restart, and which long-lived tokens exist.
+- Unavailable ESPHome devices on 6 Nov: Frontroom (which also carries four window sensors), Octoprint Sw and Bedroom Relay. History shows all three unavailable from at least 4 Nov, so they are not linked to the restart. Jon says Frontroom is an ESP01 relay he used for Christmas lights and that most lights are now WLED; the window sensors do not fit that, so it is unresolved. Jon is to check all three at home.
+- sensor.none_uptime is the USG 3P and sensor.none_uptime_2 is the UAP-AC-Lite, both from the UniFi integration.
+
+## ESPHome Device Builder MCP entry (found 6 Nov 2026)
+- Home Assistant's MCP Client integration (domain mcp) has an entry "ESPHome Device Builder", source hassio, created about 20:52 on 5 Nov and loaded. Jon clicked Add on it.
+- A conversation agent only uses its tools once they are ticked under that agent's AI tools. Whether they are ticked has not been checked; Jon is to look at home. It gives Claude's sessions no extra access, because they reach HA through the REST API and SSH tools, not through HA's MCP client.
+- A third-party source says ESPHome Device Builder 1.25.0 (ESPHome 2026.10.0) has a built-in /api/mcp. Not verified.
+
+## Bluetooth proxies and BLE presence (checked 6 Nov 2026, task 214)
+- Per Jon: house_monitor, school-reminders and encoder-test are on the ground floor, and the mmWave test bed is on the first floor. So three proxies on the ground floor and one (a test bed) on the first.
+- All four have bluetooth_proxy (active: true, connection_slots 3 on most). house_monitor, school-reminders and the mmWave test bed each run four ble_presence sensors with iBeacon UUIDs. alarm-panel-brain.yaml has no bluetooth_proxy.
+- Nothing in Home Assistant was found that depends on the presence sensors. Which proxy the ld2410_ble custom integration uses was not checked.
+- One floor check disagreed with another: floor_id() shows Boys Room, Dining Room and Living Room with no floor, while floor_areas() lists them under floors. Unresolved.
+- Jon has not yet said what Bluetooth is for, so nothing has been changed. Details and the open question are in task 214.
+
+## Alarm Panel Brain board (status 6 Nov 2026)
+- Jon says the Brain board is in pieces on the bench and still to be made. Its Home Assistant entities (alarm_panel_brain_*) are therefore unavailable, which is expected, and so is the MQTT heartbeat sensor (alarm/hbeatret).
+- Jon thought the Brain may have been replaced by staying on the Arduino Mega. No record of that decision was found, so whether the Brain is still the ESP32 described above is unresolved.
+- Alarmo showed "disarmed" from 10:25:35 on 6 Nov, just after the restart. Its state before the restart is not known. Task 120 records that Alarmo has no sensors configured.
+
 ## Notify services
 
 notify.alexa_media_lounge_plus, notify.alexa_media_everywhere, notify.alexa_media_kitchen_dot, notify.alexa_media_bedroom_dot, notify.alexa_media_diningroom_dot, notify.alexa_media_boy_s_new_dot, notify.mobile_app_jon_phone, notify.mobile_app_joseph, notify.natalie_notify, notify.jacob_notify.
