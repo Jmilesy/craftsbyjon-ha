@@ -83,6 +83,28 @@ Added 8 Oct 2026 (checked against the live HA request log, the sketch source and
 - OTA: POST /update on port 80 with HTTP Basic Auth (ota.cpp in the sketch). JonPC cannot reach 192.168.20.115 directly (connection fails), but the NUC can. The 8 Oct 2026 flash ran a temporary socat on the NUC (port 8081 forwarding to 192.168.20.115 port 80), POSTed the .bin from JonPC to 192.168.1.104:8081/update, then stopped socat. The upload returned OTA OK and the panel came back on the network after the reboot.
 - Weather: weather data is polled, but no references to lcarsWeather were found in AlarmPanel_Downstairs.ino, lcars_ui.cpp, lcars_menu.cpp or lcars_school.cpp on 8 Oct 2026, consistent with the widget not being wired in.
 
+## Tasmota devices (added 6 Nov 2026)
+- Source: the Home Assistant Tasmota integration (10 devices) and each device's own web status page (read only), checked from the NUC on 6 Nov 2026. These devices were not documented anywhere before this.
+- Home Assistant lists all ten at 10.0.0.x addresses, which is the Wireless network (10.0.0.0/24, no VLAN). None is on the IoT VLAN.
+- The eight that answered share these settings: gateway and DNS 10.0.0.1, MQTT broker 192.168.1.104 port 1883 (Mosquitto on the NUC), and the main home Wi-Fi network (name not recorded here).
+
+| Name in HA | IP | Hostname | Model | Area | Firmware |
+|---|---|---|---|---|---|
+| Christmas Switch | 10.0.0.84 | tasmota-F11AAF-6831 | Athom Plug V2 | Dining Room | 10.1.0 |
+| Kitchen Light | 10.0.0.32 | Kitchen-Light-4452 | LVWIT A70 12W (bulb) | Kitchen | 11.0.0 |
+| Boys light | 10.0.0.14 | boys-light-4980 | Zemismart GU10 (bulb) | Boys Room | 11.0.0 |
+| Hall Light | 10.0.0.18 | hall-light-2630 | LVWIT A70 12W (bulb) | Hall | 11.0.0 |
+| Landing | 10.0.0.70 | tasmota-F1973A-5946 | Athom Plug V2 | Hall | 10.1.0 |
+| PC Socket | 10.0.0.33 | tasmota-2138 | Gosund UP111 | Dining Room | 11.0.0 |
+| Washing Machine | 10.0.0.30 | not read (no reply) | Gosund UP111 | Kitchen | 11.0.0 (from HA) |
+| Lounge AV | 10.0.0.28 | tasmota-8818C7-6343 | Gosund UP111 | Living Room | 11.0.0 |
+| Master Bedroom | 10.0.0.69 | not read (no reply) | Athom Plug V2 | Bedroom | 10.1.0 (from HA) |
+| upstairs_lights | 10.0.0.68 | tasmota-F1643C-1084 | Athom Plug V2 | Boys Room | 10.1.0 |
+
+- 6 Nov 2026: Master Bedroom had all 16 of its Home Assistant entities unavailable and did not answer at 10.0.0.69. Washing Machine did not answer a direct query at 10.0.0.30 although Home Assistant showed its entities as available. The cause of either is not known; Jon is to check both at home.
+- Not recorded: whether any of these has a fixed address or a DHCP reservation.
+- Jon has spare Tasmota plugs that are not in Home Assistant; one is planned for Christmas lights (said 6 Nov 2026). He plans to label each plug with its name and IP address, and to move some devices to the IoT VLAN (192.168.20.0/24, VLAN 20). Nothing has been moved. The open questions that must be answered first (Wi-Fi network name, reservations, whether the firewall lets TCP 1883 through to the NUC) are listed in craftsbyjon-docs, infra/home-network.md.
+
 ## Notify services
 
 notify.alexa_media_lounge_plus, notify.alexa_media_everywhere, notify.alexa_media_kitchen_dot, notify.alexa_media_bedroom_dot, notify.alexa_media_diningroom_dot, notify.alexa_media_boy_s_new_dot, notify.mobile_app_jon_phone, notify.mobile_app_joseph, notify.natalie_notify, notify.jacob_notify.
