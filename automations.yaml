@@ -1745,7 +1745,12 @@
     state: 'on'
   actions:
   - repeat:
-      count: 60
+      while:
+      - condition: template
+        value_template: '{{ repeat.index <= 60 }}'
+      - condition: state
+        entity_id: input_boolean.boys_bedtime
+        state: 'on'
       sequence:
       - action: light.turn_on
         target:
