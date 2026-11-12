@@ -1,6 +1,7 @@
 esphome:
   name: octoprint_sw
-  platform: ESP8266
+
+esp8266:
   board: nodemcuv2
 
 wifi:
@@ -20,7 +21,8 @@ logger:
 
 # Enable Home Assistant API
 api:
-  password: !secret api_password
+  encryption:
+    key: !secret api_key
 
 ota:
   - platform: esphome
