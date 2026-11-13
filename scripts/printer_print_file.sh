@@ -12,6 +12,17 @@ else
     EXT="pdf"
 fi
 
+# ext "esc": raw ESC/POS bytes for the Epson TM-T88V staff slip printer on the
+# Pi (added 12 Nov 2026, see Miles_Home home-tech/hardware/plans/epson-staff-slip-plan.md).
+# Goes to the raw CUPS queue EpsonSlip and never touches the Canon queue.
+if [ "$EXT" = "esc" ]; then
+    echo "$CONTENT_B64" | base64 -d | ssh -o StrictHostKeyChecking=no -o ConnectTimeout=8 \
+        -i /config/.ssh/id_ed25519_printserver \
+        jon@192.168.1.46 \
+        "lp -d EpsonSlip -o raw -t 'Staff slip'"
+    exit $?
+fi
+
 REMOTE_PATH="/tmp/cbj_print_job_$$.${EXT}"
 
 echo "$CONTENT_B64" | base64 -d | ssh -o StrictHostKeyChecking=no -o ConnectTimeout=8 \
