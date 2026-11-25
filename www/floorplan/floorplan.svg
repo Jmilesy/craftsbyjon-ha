@@ -29,7 +29,6 @@
   <path id="room-landing-presence" class="room-overlay" d="M891.3,97.4h-320.8l-63.9,63.9v109.2h116.6v-86.7h268.1v-86.4h0Z"/>
   <path id="room-boys-light" class="room-overlay" d="M513.6,266.7v279.3h384.7V180h-268.1v86.7h-116.6Z"/>
   <path id="room-boys-presence" class="room-overlay" d="M513.6,266.7v279.3h384.7V180h-268.1v86.7h-116.6Z"/>
-  <path id="room-bedroom-light" class="room-overlay" d="M513.6,157.5H122.9v84.6h-60l-50.9,50.9v146l44.1,44.1h54.8v62.8h291.8v-233.5h110.9v-155h0Z"/>
 
   <!-- ═══ BEDROOM info panel ═══ -->
   <rect x="128" y="462" width="105" height="52" rx="6" class="info-bg"/>
@@ -37,11 +36,6 @@
   <text id="bedroom-temp" x="138" y="496" class="info-text">--°C</text>
   <text x="138" y="508" class="info-text-sm">&#128167; <tspan id="bedroom-hum">--%</tspan></text>
 
-  <!-- Bedroom light button -->
-  <g id="light-bedroom" class="light-btn">
-    <circle cx="400" cy="340" r="18" class="light-off" stroke="white" stroke-width="1.5"/>
-    <text x="391" y="346" font-size="18" fill="white" pointer-events="none">&#128161;</text>
-  </g>
 
   <!-- ═══ BOYS ROOM info panel ═══ -->
   <rect x="522" y="462" width="105" height="52" rx="6" class="info-bg"/>

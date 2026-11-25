@@ -8,5 +8,5 @@ cards:
       - type: horizontal-stack
         cards:
           - type: custom:floorplan-card
-            config: /local/floorplan/floorplan.yaml?v=4
+            config: /local/floorplan/floorplan.yaml?v=5
             full_height: true

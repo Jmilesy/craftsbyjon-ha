@@ -46,38 +46,6 @@ cards:
         variables:
           accent: "255,255,80"
 
-  # ── LIGHTING ──────────────────────────────────────────────────────────────
-  - type: custom:button-card
-    template: room_section_title
-    variables:
-      title: "💡 LIGHTING"
-      accent: "255,200,0"
-
-  - type: custom:layout-card
-    layout_type: grid
-    layout:
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr))
-      grid-gap: 8px
-    cards:
-      - type: custom:mushroom-light-card
-        entity: light.bedroom_light
-        name: Main Light
-        use_light_color: true
-        show_brightness_control: true
-        show_color_control: true
-        show_color_temp_control: true
-        tap_action:
-          action: toggle
-        card_mod:
-          style: |
-            ha-card {
-              background: rgba(255,255,255,0.05) !important;
-              border-radius: 20px;
-              border: 1px solid rgba(255,255,255,0.1);
-              box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-              backdrop-filter: blur(12px);
-            }
-
   # ── MEDIA ─────────────────────────────────────────────────────────────────
   - type: custom:button-card
     template: room_section_title

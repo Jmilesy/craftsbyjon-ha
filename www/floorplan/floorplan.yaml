@@ -1,4 +1,4 @@
-image: /local/floorplan/floorplan.svg?v=28
+image: /local/floorplan/floorplan.svg?v=29
 stylesheet: /local/floorplan/floorplan.css?v=7
 log_level: warn
 
@@ -38,24 +38,6 @@ rules:
         service: floorplan.class_set
         service_data:
           element: room-boys-presence
-          class: "room-overlay overlay-off"
-
-  - name: Bedroom light overlay
-    entities:
-      - entity: light.bedroom_light
-        element: room-bedroom-light
-    state_action:
-      - state: "on"
-        action: call-service
-        service: floorplan.class_set
-        service_data:
-          element: room-bedroom-light
-          class: "room-overlay overlay-light-on"
-      - state: "off"
-        action: call-service
-        service: floorplan.class_set
-        service_data:
-          element: room-bedroom-light
           class: "room-overlay overlay-off"
 
   - name: Landing light overlay
@@ -189,29 +171,6 @@ rules:
         service: floorplan.class_set
         service_data:
           element: light-landing-btn
-          class: "light-btn light-off"
-
-  - name: Bedroom light button
-    entities:
-      - entity: light.bedroom_light
-        element: light-bedroom
-    tap_action:
-      action: call-service
-      service: light.toggle
-      service_data:
-        entity_id: light.bedroom_light
-    state_action:
-      - state: "on"
-        action: call-service
-        service: floorplan.class_set
-        service_data:
-          element: light-bedroom
-          class: "light-btn light-on"
-      - state: "off"
-        action: call-service
-        service: floorplan.class_set
-        service_data:
-          element: light-bedroom
           class: "light-btn light-off"
 
   - name: Bedroom temperature

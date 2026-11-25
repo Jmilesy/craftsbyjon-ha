@@ -86,20 +86,6 @@
           fill: transparent !important;
         {% endif %}
 
-    - name: bedroom_light_fill
-      state: >
-        {% set l = states.light.bedroom_light %}
-        {% if l.state == 'on' %}
-          {% if l.attributes.rgb_color %}
-            {% set r,g,b = l.attributes.rgb_color %}
-            fill: rgba({{ r }},{{ g }},{{ b }},0.35) !important;
-          {% else %}
-            fill: rgba(255,220,80,0.35) !important;
-          {% endif %}
-        {% else %}
-          fill: transparent !important;
-        {% endif %}
-
     - name: landing_light_fill
       state: >
         {% set l = states.light.hall_light %}

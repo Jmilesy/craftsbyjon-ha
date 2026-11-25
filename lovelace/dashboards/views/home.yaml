@@ -313,7 +313,6 @@ cards:
 
       - type: custom:button-card
         template: room_card
-        entity: light.bedroom_light
         name: Bedroom
         icon: mdi:bed-king
         label: |
@@ -325,8 +324,6 @@ cards:
         tap_action:
           action: navigate
           navigation_path: /cinematic-dashboard/bedroom
-        hold_action:
-          action: toggle
 
       - type: custom:button-card
         template: room_card
