@@ -103,27 +103,6 @@ cards:
           text-shadow: 0 0 10px rgba(122,38,58,0.8);
         }
 
-  # Joseph's Light Control
-  - type: custom:mushroom-light-card
-    entity: light.joseph_s_light
-    use_light_color: true
-    show_brightness_control: true
-    show_color_control: true
-    show_color_temp_control: true
-    name: Joseph's Light
-    icon: mdi:ceiling-light
-    tap_action:
-      action: toggle
-    card_mod:
-      style: |
-        ha-card {
-          background: linear-gradient(135deg, rgba(122,38,58,0.3), rgba(27,177,231,0.2)) !important;
-          border-radius: 20px;
-          border: 2px solid #7A263A;
-          box-shadow: 0 0 30px rgba(122,38,58,0.5), 0 8px 32px rgba(0,0,0,0.4);
-          backdrop-filter: blur(10px);
-        }
-
   # Media & Entertainment
   - type: custom:mushroom-media-player-card
     entity: media_player.boy_s_new_dot
